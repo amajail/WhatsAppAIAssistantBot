@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BD5D2562-8355-45AB-87AE-C3F0EABF11EC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatsAppAIAssistantBot.Api", "src\WhatsAppAIAssistantBot.Api\WhatsAppAIAssistantBot.Api.csproj", "{6C9C9215-63E3-4D0F-9CEA-B4A6AE927842}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatsAppAIAssistantBot.Models", "src\WhatsAppAIAssistantBot.Models\WhatsAppAIAssistantBot.Models.csproj", "{F487CB5C-A7FE-470E-8999-C9F335E76E3C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatsAppAIAssistantBot.Services", "src\WhatsAppAIAssistantBot.Services\WhatsAppAIAssistantBot.Services.csproj", "{4CA0DA17-72A8-4109-8CB0-7CFBA70D8A67}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6C9C9215-63E3-4D0F-9CEA-B4A6AE927842}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C9C9215-63E3-4D0F-9CEA-B4A6AE927842}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C9C9215-63E3-4D0F-9CEA-B4A6AE927842}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C9C9215-63E3-4D0F-9CEA-B4A6AE927842}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F487CB5C-A7FE-470E-8999-C9F335E76E3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F487CB5C-A7FE-470E-8999-C9F335E76E3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F487CB5C-A7FE-470E-8999-C9F335E76E3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F487CB5C-A7FE-470E-8999-C9F335E76E3C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CA0DA17-72A8-4109-8CB0-7CFBA70D8A67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CA0DA17-72A8-4109-8CB0-7CFBA70D8A67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CA0DA17-72A8-4109-8CB0-7CFBA70D8A67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CA0DA17-72A8-4109-8CB0-7CFBA70D8A67}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6C9C9215-63E3-4D0F-9CEA-B4A6AE927842} = {BD5D2562-8355-45AB-87AE-C3F0EABF11EC}
+		{F487CB5C-A7FE-470E-8999-C9F335E76E3C} = {BD5D2562-8355-45AB-87AE-C3F0EABF11EC}
+		{4CA0DA17-72A8-4109-8CB0-7CFBA70D8A67} = {BD5D2562-8355-45AB-87AE-C3F0EABF11EC}
+	EndGlobalSection
+EndGlobal

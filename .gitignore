@@ -1,0 +1,54 @@
+# .NET build artifacts
+bin/
+obj/
+out/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code settings
+.vscode/
+
+# Rider settings
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# NuGet packages
+*.nupkg
+packages/
+.nuget/
+
+# Build results
+*.exe
+*.dll
+*.app
+*.pdb
+
+# Publish results
+publish/
+*.db
+
+# Test results
+TestResults/
+*.coverage
+*.coveragexml
+
+# Others
+*.swp
+*.tmp
+*.bak
+
+# Azure Pipelines
+.azure-pipelines/
+
+# Local
+src/WhatsAppAIAssistantBot.Api/appsettings.Development.json
