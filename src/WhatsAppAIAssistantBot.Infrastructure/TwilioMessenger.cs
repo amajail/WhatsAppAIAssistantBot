@@ -1,12 +1,13 @@
-namespace WhatsAppAIAssistantBot.Services;
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
 using Twilio.Types;
 using Microsoft.Extensions.Configuration;
 
-public  class TwilioMessenger(IConfiguration configuration) : ITwilioMessenger
+namespace WhatsAppAIAssistantBot.Infrastructure;
+
+public class TwilioMessenger(IConfiguration configuration) : ITwilioMessenger
 {
-    public  async Task SendMessageAsync(string to, string message)
+    public async Task SendMessageAsync(string to, string message)
     {
         if (configuration == null)
             throw new InvalidOperationException("TwilioMessenger not initialized.");
@@ -20,7 +21,7 @@ public  class TwilioMessenger(IConfiguration configuration) : ITwilioMessenger
         await MessageResource.CreateAsync(
             body: message,
             from: new PhoneNumber(fromNumber),
-            to: new PhoneNumber($"whatsapp:{to}") 
+            to: new PhoneNumber(to)
         );
     }
 }

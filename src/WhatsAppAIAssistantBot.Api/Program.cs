@@ -1,15 +1,18 @@
-using WhatsAppAIAssistantBot.Services;
+using WhatsAppAIAssistantBot.Application;
+using Microsoft.SemanticKernel;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers(); // <-- Add this line
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<ITwilioMessenger, TwilioMessenger>();
-builder.Services.AddScoped<ISemanticKernelService, SemanticKernelService>();
-builder.Services.AddHttpClient<IAssistantApiService, AssistantApiService>();
-builder.Services.AddScoped<IOrchestrationService, OrchestrationService>(); 
+builder.Services.AddWhatsAppAIAssistantBotApplication();
+
+builder.Services.AddTransient((serviceProvider) =>
+{
+    return new Kernel(serviceProvider);
+});
 
 var app = builder.Build();
 

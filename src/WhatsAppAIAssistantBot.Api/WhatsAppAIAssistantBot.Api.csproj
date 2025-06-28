@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WhatsAppAIAssistantBot.services\WhatsAppAIAssistantBot.services.csproj" />
-    <ProjectReference Include="..\WhatsAppAIAssistantBot.models\WhatsAppAIAssistantBot.models.csproj" />
+    <ProjectReference Include="..\WhatsAppAIAssistantBot.Application\WhatsAppAIAssistantBot.Application.csproj" />
+    <ProjectReference Include="..\WhatsAppAIAssistantBot.Models\WhatsAppAIAssistantBot.Models.csproj" />
   </ItemGroup>
 
 </Project>

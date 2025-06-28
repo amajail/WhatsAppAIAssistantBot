@@ -1,19 +1,21 @@
-namespace WhatsAppAIAssistantBot.Services;
+namespace WhatsAppAIAssistantBot.Application;
 
 using Microsoft.SemanticKernel;
-using WhatsAppAIAssistantBot.Services.Skills;
+using WhatsAppAIAssistantBot.Application.Skills;
+using Microsoft.Extensions.Configuration;
 
 public class SemanticKernelService : ISemanticKernelService
 {
     private readonly Kernel _kernel;
 
-    public SemanticKernelService()
+    public SemanticKernelService(IConfiguration configuration)
     {
         var builder = Kernel.CreateBuilder();
-        builder.AddOpenAIChatCompletion("gpt-4", "OPENAI_API_KEY");
+        var openAiApiKey = configuration["OpenAI:ApiKey"] ?? throw new InvalidOperationException("OpenAI API Key not configured");
+        builder.AddOpenAIChatCompletion("gpt-4", openAiApiKey);
         _kernel = builder.Build();
 
-   _kernel.Plugins.AddFromObject(new TimeSkill(), "time");
+        _kernel.Plugins.AddFromObject(new TimeSkill(), "time");
     }
 
 public async Task<string> RunLocalSkillAsync(string input)
@@ -30,7 +32,12 @@ public async Task<string> RunLocalSkillAsync(string input)
 }
 }
 
+
+
+
 public interface ISemanticKernelService
 {
     Task<string> RunLocalSkillAsync(string input);
 }
+
+
