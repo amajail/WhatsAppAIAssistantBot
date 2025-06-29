@@ -20,6 +20,7 @@ The solution follows Clean Architecture principles with these layers:
 
 - **OrchestrationService** (`src/WhatsAppAIAssistantBot.Application/OrchestrationService.cs:10`): Main business logic that handles incoming messages and coordinates AI responses
 - **WhatsAppController** (`src/WhatsAppAIAssistantBot.Api/Controllers/WhatsAppController.cs:9`): Receives Twilio webhook calls at `/api/whatsapp`
+- **HealthController** (`src/WhatsAppAIAssistantBot.Api/Controllers/HealthController.cs:6`): Health check endpoints at `/api/health` and `/api/health/ready`
 - **AssistantOpenAIService**: Manages OpenAI Assistant API interactions with thread management
 - **TwilioMessenger**: Handles outbound WhatsApp message sending via Twilio
 - **SemanticKernelService**: Provides local AI skills (currently has TimeSkill)
@@ -125,3 +126,10 @@ Application Insights is integrated for telemetry and monitoring:
 - **Connection string** auto-configured in Azure deployment
 - **Log Analytics workspace** created automatically
 - **Dashboards and alerts** available in Azure Portal
+
+## Health Checks
+
+The API includes health check endpoints for monitoring:
+- **`/api/health`**: Basic health check returning status, timestamp, and version
+- **`/api/health/ready`**: Readiness probe for deployment verification
+- **Automated testing**: GitHub Actions pipeline includes health checks after deployment

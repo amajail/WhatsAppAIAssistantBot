@@ -50,10 +50,17 @@ jobs:
     - name: Deploy Bicep Template
       id: deploy
       run: |
-        deployment_output=$(az deployment group create \
+        echo "Deploying Bicep template..."
+        az deployment group create \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --template-file azure-deploy.bicep \
           --parameters location="${{ env.LOCATION }}" \
+          --output table
+        
+        echo "Getting deployment outputs..."
+        deployment_output=$(az deployment group show \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name azure-deploy \
           --query 'properties.outputs' \
           --output json)
         
@@ -63,13 +70,13 @@ jobs:
 
     - name: Display Deployment Results
       run: |
-        echo "🚀 Infrastructure deployed successfully!"
-        echo "📝 Deployment outputs:"
+        echo "Infrastructure deployed successfully!"
+        echo "Deployment outputs:"
         echo "${{ steps.deploy.outputs.deployment_output }}" | jq -r '
-          "🌐 App Service URL: " + .appServiceUrl.value,
-          "📱 App Service Name: " + .appServiceName.value,
-          "📊 Application Insights: " + .applicationInsightsName.value,
-          "🔗 Connection String: " + .applicationInsightsConnectionString.value[0:50] + "..."
+          "App Service URL: " + .appServiceUrl.value,
+          "App Service Name: " + .appServiceName.value,
+          "Application Insights: " + .applicationInsightsName.value,
+          "Connection String: " + .applicationInsightsConnectionString.value[0:50] + "..."
         '
 
     - name: Update App Deployment Workflow

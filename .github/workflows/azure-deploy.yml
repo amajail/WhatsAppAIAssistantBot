@@ -46,3 +46,32 @@ jobs:
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         package: ${{env.DOTNET_ROOT}}/myapp
+
+    - name: Wait for deployment
+      run: sleep 30
+
+    - name: Health Check
+      run: |
+        echo "Testing health endpoint..."
+        response=$(curl -s -w "%{http_code}" -o /tmp/health_response.json "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/api/health")
+        
+        if [ "$response" -eq 200 ]; then
+          echo "Health check passed!"
+          echo "Response:"
+          cat /tmp/health_response.json
+        else
+          echo "Health check failed with status code: $response"
+          exit 1
+        fi
+
+    - name: API Endpoint Test
+      run: |
+        echo "Testing WhatsApp API endpoint..."
+        response=$(curl -s -w "%{http_code}" -o /dev/null -X GET "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/api/whatsapp")
+        
+        if [ "$response" -eq 405 ]; then
+          echo "WhatsApp API endpoint test passed! (405 Method Not Allowed is expected for GET)"
+        else
+          echo "WhatsApp API endpoint test failed with status code: $response"
+          exit 1
+        fi
