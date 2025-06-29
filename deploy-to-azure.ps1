@@ -8,7 +8,7 @@ param(
     [string]$Location = "East US",
     
     [Parameter(Mandatory=$false)]
-    [string]$AppServiceName = "whatsapp-ai-bot-$(Get-Random -Minimum 1000 -Maximum 9999)"
+    [string]$AppServiceName
 )
 
 # Login to Azure (if not already logged in)
@@ -19,15 +19,25 @@ if (-not $context) {
     Connect-AzAccount
 }
 
+# Generate deterministic app service name if not provided
+if (-not $AppServiceName) {
+    $hash = [System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($ResourceGroupName))
+    $hashString = [System.BitConverter]::ToString($hash).Replace("-", "").Substring(0, 8).ToLower()
+    $AppServiceName = "whatsapp-ai-bot-$hashString"
+}
+
 # Create resource group if it doesn't exist
 Write-Host "Creating resource group: $ResourceGroupName"
 $rg = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-not $rg) {
+    Write-Host "Resource group doesn't exist, creating..."
     New-AzResourceGroup -Name $ResourceGroupName -Location $Location
+} else {
+    Write-Host "Resource group already exists, using existing one."
 }
 
 # Deploy Bicep template
-Write-Host "Deploying Azure resources..."
+Write-Host "Deploying Azure resources with App Service Name: $AppServiceName"
 $deployment = New-AzResourceGroupDeployment `
     -ResourceGroupName $ResourceGroupName `
     -TemplateFile "azure-deploy.bicep" `

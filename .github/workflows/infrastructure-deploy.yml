@@ -1,0 +1,79 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'azure-deploy.bicep'
+      - '.github/workflows/infrastructure-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: 'Resource Group Name'
+        required: true
+        default: 'rg-whatsapp-ai-bot'
+      location:
+        description: 'Azure Region'
+        required: true
+        default: 'East US'
+        type: choice
+        options:
+          - 'East US'
+          - 'West US 2'
+          - 'West Europe'
+          - 'Southeast Asia'
+
+env:
+  RESOURCE_GROUP: ${{ github.event.inputs.resource_group || 'rg-whatsapp-ai-bot' }}
+  LOCATION: ${{ github.event.inputs.location || 'East US' }}
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    environment: Dev
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Create Resource Group
+      run: |
+        az group create \
+          --name ${{ env.RESOURCE_GROUP }} \
+          --location "${{ env.LOCATION }}"
+
+    - name: Deploy Bicep Template
+      id: deploy
+      run: |
+        deployment_output=$(az deployment group create \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --template-file azure-deploy.bicep \
+          --parameters location="${{ env.LOCATION }}" \
+          --query 'properties.outputs' \
+          --output json)
+        
+        echo "deployment_output<<EOF" >> $GITHUB_OUTPUT
+        echo "$deployment_output" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Display Deployment Results
+      run: |
+        echo "🚀 Infrastructure deployed successfully!"
+        echo "📝 Deployment outputs:"
+        echo "${{ steps.deploy.outputs.deployment_output }}" | jq -r '
+          "🌐 App Service URL: " + .appServiceUrl.value,
+          "📱 App Service Name: " + .appServiceName.value,
+          "📊 Application Insights: " + .applicationInsightsName.value,
+          "🔗 Connection String: " + .applicationInsightsConnectionString.value[0:50] + "..."
+        '
+
+    - name: Update App Deployment Workflow
+      run: |
+        APP_NAME=$(echo '${{ steps.deploy.outputs.deployment_output }}' | jq -r '.appServiceName.value')
+        echo "Update your azure-deploy.yml workflow to use: $APP_NAME"
+        echo "Set AZURE_WEBAPP_NAME environment variable to: $APP_NAME"

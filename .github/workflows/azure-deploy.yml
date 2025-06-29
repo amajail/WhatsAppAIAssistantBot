@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: 'whatsapp-ai-bot-7367'
+  AZURE_WEBAPP_NAME: 'whatsapp-ai-bot-6fc86fd7'
   AZURE_WEBAPP_PACKAGE_PATH: '.'
   DOTNET_VERSION: '8.0.x'
 

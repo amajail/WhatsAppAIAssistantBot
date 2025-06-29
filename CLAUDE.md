@@ -56,26 +56,72 @@ Required environment variables/app settings:
 - `Twilio__AccountSid`: Twilio account SID
 - `Twilio__AuthToken`: Twilio auth token
 - `Twilio__FromNumber`: Twilio WhatsApp number (format: whatsapp:+1234567890)
+- `APPLICATIONINSIGHTS_CONNECTION_STRING`: Application Insights connection string (auto-configured in Azure)
 
 Configuration is handled through `appsettings.json` and `appsettings.Development.json`.
 
 ## Deployment
 
 The project includes Azure deployment infrastructure:
-- `azure-deploy.bicep`: Bicep template for Azure resources
-- `deploy-to-azure.ps1`: PowerShell deployment script
-- `.github/workflows/azure-deploy.yml`: GitHub Actions CI/CD pipeline
+- `azure-deploy.bicep`: Bicep template for Azure resources (App Service, Application Insights)
+- `deploy-to-azure.ps1`: PowerShell deployment script (idempotent)
+- `.github/workflows/azure-deploy.yml`: GitHub Actions application deployment pipeline
+- `.github/workflows/infrastructure-deploy.yml`: GitHub Actions infrastructure deployment pipeline
 - `Dockerfile`: Container configuration for deployment
+
+### Deployment Commands
+
+```powershell
+# Deploy infrastructure (idempotent)
+.\deploy-to-azure.ps1 -ResourceGroupName "rg-whatsapp-bot-dev" -Location "East US2"
+
+# Configure app settings via Azure CLI
+az webapp config appsettings set \
+  --resource-group "rg-whatsapp-bot-dev" \
+  --name "your-app-service-name" \
+  --settings \
+    "OpenAI__ApiKey=your-key" \
+    "OpenAI__AssistantId=your-id" \
+    "Twilio__AccountSid=your-sid" \
+    "Twilio__AuthToken=your-token" \
+    "Twilio__FromNumber=whatsapp:+1234567890"
+```
+
+Current deployment:
+- **Resource Group**: `rg-whatsapp-bot-dev`
+- **App Service**: `whatsapp-ai-bot-6fc86fd7`
+- **Application Insights**: `whatsapp-ai-bot-6fc86fd7-insights`
+- **URL**: https://whatsapp-ai-bot-6fc86fd7.azurewebsites.net
 
 ## Testing
 
-No test projects are currently configured in the solution. Tests should be added following .NET testing conventions with xUnit or NUnit.
+The solution includes a comprehensive test suite:
+- **WhatsAppAIAssistantBot.Tests**: xUnit test project with Moq for mocking
+- Tests cover OrchestrationService business logic
+- GitHub Actions pipeline runs tests automatically on build
+
+```bash
+# Run all tests
+dotnet test
+
+# Run tests with verbose output
+dotnet test --verbosity normal
+```
 
 ## Dependencies
 
 Key NuGet packages:
+- Microsoft.ApplicationInsights.AspNetCore (2.22.0)
 - Microsoft.SemanticKernel (1.55.0)
 - Twilio (7.11.1)
 - Swashbuckle.AspNetCore (8.1.4)
 
 The API includes Swagger UI available at `/swagger` in development mode.
+
+## Monitoring
+
+Application Insights is integrated for telemetry and monitoring:
+- **Automatic telemetry collection** for requests, dependencies, and exceptions
+- **Connection string** auto-configured in Azure deployment
+- **Log Analytics workspace** created automatically
+- **Dashboards and alerts** available in Azure Portal
