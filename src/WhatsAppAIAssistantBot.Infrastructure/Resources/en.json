@@ -1,0 +1,20 @@
+{
+  "welcome_message": "Welcome! Please tell me your name by typing 'Name: Your Name' or 'My name is Your Name'",
+  "request_name": "Please tell me your name by typing 'Name: Your Name' or 'My name is Your Name'",
+  "greet_with_name": "Hello {0}! Please provide your email address by typing 'Email: your@email.com'",
+  "request_email": "Please provide your email address by typing 'Email: your@email.com'",
+  "registration_complete": "Thank you {0}! Your registration is complete. How can I help you today?",
+  
+  "invalid_email": "Please provide a valid email address",
+  "invalid_name": "Please provide a valid name",
+  
+  "language_changed": "Language changed to {0}",
+  "language_not_supported": "Language not supported. Available languages: Español (es), English (en)",
+  "current_language": "Your current language is: {0}",
+  
+  "help_message": "Available commands:\n• /lang [es|en] - Change language\n• /help - Show this help\n\nYou can write any message and I'll help you with whatever you need.",
+  "available_commands": "Available commands: /lang, /help",
+  
+  "general_error": "An error occurred. Please try again.",
+  "service_unavailable": "The service is not available at the moment. Please try later."
+}

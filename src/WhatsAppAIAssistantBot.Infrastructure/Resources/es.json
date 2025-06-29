@@ -1,0 +1,20 @@
+{
+  "welcome_message": "¡Bienvenido! Por favor dime tu nombre escribiendo 'Nombre: Tu Nombre' o 'Mi nombre es Tu Nombre'",
+  "request_name": "Por favor dime tu nombre escribiendo 'Nombre: Tu Nombre' o 'Mi nombre es Tu Nombre'",
+  "greet_with_name": "¡Hola {0}! Por favor proporciona tu dirección de email escribiendo 'Email: tu@email.com'",
+  "request_email": "Por favor proporciona tu dirección de email escribiendo 'Email: tu@email.com'",
+  "registration_complete": "¡Gracias {0}! Tu registro está completo. ¿En qué puedo ayudarte hoy?",
+  
+  "invalid_email": "Por favor proporciona una dirección de email válida",
+  "invalid_name": "Por favor proporciona un nombre válido",
+  
+  "language_changed": "Idioma cambiado a {0}",
+  "language_not_supported": "Idioma no soportado. Idiomas disponibles: Español (es), English (en)",
+  "current_language": "Tu idioma actual es: {0}",
+  
+  "help_message": "Comandos disponibles:\n• /idioma [es|en] - Cambiar idioma\n• /ayuda - Mostrar esta ayuda\n\nPuedes escribir cualquier mensaje y te ayudaré con lo que necesites.",
+  "available_commands": "Comandos disponibles: /idioma, /ayuda",
+  
+  "general_error": "Ha ocurrido un error. Por favor intenta de nuevo.",
+  "service_unavailable": "El servicio no está disponible en este momento. Por favor intenta más tarde."
+}

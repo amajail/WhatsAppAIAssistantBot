@@ -22,6 +22,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.ThreadId).HasMaxLength(100).IsRequired();
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Email).HasMaxLength(255);
+            entity.Property(e => e.LanguageCode).HasMaxLength(5).IsRequired().HasDefaultValue("es");
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.UpdatedAt).IsRequired();
             

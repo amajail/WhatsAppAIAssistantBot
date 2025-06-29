@@ -13,6 +13,7 @@ public class OrchestrationServiceTests
     private readonly Mock<IAssistantService> _mockAssistant;
     private readonly Mock<ITwilioMessenger> _mockTwilioMessenger;
     private readonly Mock<IUserStorageService> _mockUserStorageService;
+    private readonly Mock<ILocalizationService> _mockLocalizationService;
     private readonly OrchestrationService _orchestrationService;
 
     public OrchestrationServiceTests()
@@ -21,12 +22,14 @@ public class OrchestrationServiceTests
         _mockAssistant = new Mock<IAssistantService>();
         _mockTwilioMessenger = new Mock<ITwilioMessenger>();
         _mockUserStorageService = new Mock<IUserStorageService>();
+        _mockLocalizationService = new Mock<ILocalizationService>();
         
         _orchestrationService = new OrchestrationService(
             _mockSemanticKernel.Object,
             _mockAssistant.Object,
             _mockTwilioMessenger.Object,
-            _mockUserStorageService.Object
+            _mockUserStorageService.Object,
+            _mockLocalizationService.Object
         );
     }
 
@@ -88,6 +91,10 @@ public class OrchestrationServiceTests
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(newUser);
 
+        _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
+            LocalizationKeys.WelcomeMessage, "es"))
+            .ReturnsAsync("¡Bienvenido! Por favor dime tu nombre");
+
         // Act
         await _orchestrationService.HandleMessageAsync(userId, message);
 
@@ -95,7 +102,7 @@ public class OrchestrationServiceTests
         _mockAssistant.Verify(x => x.CreateOrGetThreadAsync(userId), Times.Once);
         _mockUserStorageService.Verify(x => x.GetUserByPhoneNumberAsync(userId), Times.Once);
         _mockTwilioMessenger.Verify(x => x.SendMessageAsync(userId, 
-            "Welcome! Please tell me your name by typing 'Name: Your Name' or 'My name is Your Name'"), Times.Once);
+            "¡Bienvenido! Por favor dime tu nombre"), Times.Once);
     }
 
     [Fact]
@@ -116,13 +123,17 @@ public class OrchestrationServiceTests
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(unregisteredUser);
 
+        _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
+            LocalizationKeys.GreetWithName, "es", "John Doe"))
+            .ReturnsAsync("¡Hola John Doe! Por favor proporciona tu correo electrónico");
+
         // Act
         await _orchestrationService.HandleMessageAsync(userId, message);
 
         // Assert
         _mockUserStorageService.Verify(x => x.UpdateUserRegistrationAsync(userId, "John Doe", string.Empty), Times.Once);
         _mockTwilioMessenger.Verify(x => x.SendMessageAsync(userId, 
-            "Hello John Doe! Please provide your email address by typing 'Email: your@email.com'"), Times.Once);
+            "¡Hola John Doe! Por favor proporciona tu correo electrónico"), Times.Once);
     }
 
     [Fact]
@@ -144,12 +155,16 @@ public class OrchestrationServiceTests
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(userWithName);
 
+        _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
+            LocalizationKeys.RegistrationComplete, "es", "John Doe"))
+            .ReturnsAsync("¡Gracias John Doe! Tu registro está completo. ¿Cómo puedo ayudarte hoy?");
+
         // Act
         await _orchestrationService.HandleMessageAsync(userId, message);
 
         // Assert
         _mockUserStorageService.Verify(x => x.UpdateUserRegistrationAsync(userId, "John Doe", "john@example.com"), Times.Once);
         _mockTwilioMessenger.Verify(x => x.SendMessageAsync(userId, 
-            "Thank you John Doe! Your registration is complete. How can I help you today?"), Times.Once);
+            "¡Gracias John Doe! Tu registro está completo. ¿Cómo puedo ayudarte hoy?"), Times.Once);
     }
 }

@@ -35,6 +35,7 @@ public static class DependencyInjection
         // Register services
         services.AddScoped<ITwilioMessenger, TwilioMessenger>();
         services.AddScoped<IUserStorageService, UserStorageService>();
+        services.AddSingleton<ILocalizationService, LocalizationService>();
 
         return services;
     }
