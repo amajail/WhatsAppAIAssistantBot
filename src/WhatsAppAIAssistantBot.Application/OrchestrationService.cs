@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using WhatsAppAIAssistantBot.Infrastructure;
 using WhatsAppAIAssistantBot.Domain.Services;
 using WhatsAppAIAssistantBot.Domain.Entities;
@@ -16,142 +17,267 @@ public class OrchestrationService(ISemanticKernelService sk,
                                   IUserStorageService userStorageService,
                                   ILocalizationService localizationService,
                                   IUserDataExtractionService userDataExtractionService,
-                                  IUserContextService userContextService) : IOrchestrationService
+                                  IUserContextService userContextService,
+                                  ILogger<OrchestrationService> logger) : IOrchestrationService
 {
     private readonly ISemanticKernelService _sk = sk;
     private readonly IAssistantService _assistant = assistant;
+    private readonly ITwilioMessenger _twilioMessenger = twilioMessenger;
     private readonly IUserStorageService _userStorageService = userStorageService;
     private readonly ILocalizationService _localizationService = localizationService;
     private readonly IUserDataExtractionService _userDataExtractionService = userDataExtractionService;
     private readonly IUserContextService _userContextService = userContextService;
+    private readonly ILogger<OrchestrationService> _logger = logger;
 
     public async Task HandleMessageAsync(string userId, string message)
     {
-        // Get or create thread ID (this will also create user if needed)
-        var threadId = await _assistant.CreateOrGetThreadAsync(userId);
+        var correlationId = Guid.NewGuid().ToString("N")[..8];
         
-        // Get user from database (should exist now)
-        var user = await _userStorageService.GetUserByPhoneNumberAsync(userId);
-        
-        if (user == null)
+        using var scope = _logger.BeginScope(new Dictionary<string, object>
         {
-            // This shouldn't happen, but create user with default language if it does
-            user = new User
-            {
-                PhoneNumber = userId,
-                ThreadId = threadId,
-                LanguageCode = "es",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-            user = await _userStorageService.CreateOrUpdateUserAsync(user);
-        }
+            ["CorrelationId"] = correlationId,
+            ["UserId"] = userId,
+            ["MessageLength"] = message?.Length ?? 0
+        });
 
+        _logger.LogInformation("Starting message processing for user {UserId} with correlation {CorrelationId}", 
+            userId, correlationId);
+
+        try
+        {
+            // Initialize user and thread
+            var (user, threadId) = await GetOrCreateUserAsync(userId);
+
+            _logger.LogDebug("User initialized - IsRegistered: {IsRegistered}, Language: {Language}, ThreadId: {ThreadId}", 
+                user.IsRegistered, user.LanguageCode, threadId);
+
+            // Try to handle as command first
+            if (await HandleCommandAsync(user, message))
+            {
+                _logger.LogInformation("Message processed as command for user {UserId}", userId);
+                return;
+            }
+
+            // Handle registration process for unregistered users
+            if (!user.IsRegistered)
+            {
+                _logger.LogInformation("Processing registration flow for unregistered user {UserId}", userId);
+                await HandleUserRegistrationAsync(user, message);
+                return;
+            }
+
+            // Handle regular conversation for registered users
+            _logger.LogInformation("Processing conversation for registered user {UserId} - {UserName}", 
+                userId, user.Name);
+            await HandleConversationAsync(user, threadId, message);
+            
+            _logger.LogInformation("Message processing completed successfully for user {UserId}", userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing message for user {UserId} with correlation {CorrelationId}", 
+                userId, correlationId);
+            throw;
+        }
+    }
+
+    private async Task<(User user, string threadId)> GetOrCreateUserAsync(string userId)
+    {
+        _logger.LogDebug("Initializing user and thread for {UserId}", userId);
+        
+        try
+        {
+            // Get or create thread ID (this will also create user if needed)
+            var threadId = await _assistant.CreateOrGetThreadAsync(userId);
+            _logger.LogDebug("Thread created/retrieved: {ThreadId} for user {UserId}", threadId, userId);
+            
+            // Get user from database (should exist now)
+            var user = await _userStorageService.GetUserByPhoneNumberAsync(userId);
+            
+            if (user == null)
+            {
+                _logger.LogWarning("User not found in database after thread creation for {UserId}, creating new user", userId);
+                // This shouldn't happen, but create user with default language if it does
+                user = new User
+                {
+                    PhoneNumber = userId,
+                    ThreadId = threadId,
+                    LanguageCode = "es",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                user = await _userStorageService.CreateOrUpdateUserAsync(user);
+                _logger.LogInformation("Created new user {UserId} with default language {Language}", userId, user.LanguageCode);
+            }
+
+            return (user, threadId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize user and thread for {UserId}", userId);
+            throw;
+        }
+    }
+
+    private async Task<bool> HandleCommandAsync(User user, string message)
+    {
+        _logger.LogDebug("Checking for commands in message for user {UserId}", user.PhoneNumber);
+        
         // Handle language switching commands
         if (await HandleLanguageCommandAsync(user, message))
         {
-            return;
+            _logger.LogInformation("Processed language command for user {UserId}", user.PhoneNumber);
+            return true;
         }
 
         // Handle help commands
         if (await HandleHelpCommandAsync(user, message))
         {
-            return;
+            _logger.LogInformation("Processed help command for user {UserId}", user.PhoneNumber);
+            return true;
         }
 
-        if (!user.IsRegistered)
-        {
-            await HandleUserRegistrationAsync(user, message);
-            return;
-        }
+        return false;
+    }
 
-        // if (message.ToLower().Contains("time"))
-        // {
-        //     return await _sk.RunLocalSkillAsync(message);
-        // }
-
-        // Use context-aware LLM interaction for registered users
-        string reply;
-        if (await _userContextService.ShouldIncludeContextAsync(message))
-        {
-            var contextLevel = await _userContextService.DetermineContextLevelAsync(message);
-            var contextualMessage = await _userContextService.FormatUserContextAsync(user, message, contextLevel);
-            reply = await _assistant.GetAssistantReplyWithContextAsync(threadId, contextualMessage);
-        }
-        else
-        {
-            reply = await _assistant.GetAssistantReplyAsync(threadId, message);
-        }
+    private async Task HandleConversationAsync(User user, string threadId, string message)
+    {
+        _logger.LogDebug("Starting conversation handling for user {UserId} with thread {ThreadId}", 
+            user.PhoneNumber, threadId);
         
-        await twilioMessenger.SendMessageAsync(userId, reply);
+        try
+        {
+            // Use context-aware LLM interaction for registered users
+            string reply;
+            var shouldIncludeContext = await _userContextService.ShouldIncludeContextAsync(message);
+            
+            if (shouldIncludeContext)
+            {
+                var contextLevel = await _userContextService.DetermineContextLevelAsync(message);
+                _logger.LogDebug("Using context-aware reply with level {ContextLevel} for user {UserId}", 
+                    contextLevel, user.PhoneNumber);
+                
+                var contextualMessage = await _userContextService.FormatUserContextAsync(user, message, contextLevel);
+                reply = await _assistant.GetAssistantReplyWithContextAsync(threadId, contextualMessage);
+            }
+            else
+            {
+                _logger.LogDebug("Using standard reply without context for user {UserId}", user.PhoneNumber);
+                reply = await _assistant.GetAssistantReplyAsync(threadId, message);
+            }
+            
+            _logger.LogInformation("Generated reply for user {UserId}, length: {ReplyLength}", 
+                user.PhoneNumber, reply?.Length ?? 0);
+            
+            await _twilioMessenger.SendMessageAsync(user.PhoneNumber, reply);
+            
+            _logger.LogDebug("Conversation handling completed for user {UserId}", user.PhoneNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in conversation handling for user {UserId} with thread {ThreadId}", 
+                user.PhoneNumber, threadId);
+            throw;
+        }
     }
 
     private async Task HandleUserRegistrationAsync(User user, string message)
     {
-        // Try to extract user data using the hybrid extraction service
-        var extractionResult = await _userDataExtractionService.ExtractUserDataAsync(message, user.LanguageCode);
-
-        // Handle name extraction when user doesn't have a name yet
-        if (string.IsNullOrEmpty(user.Name))
+        _logger.LogInformation("Starting registration process for user {UserId} - HasName: {HasName}, HasEmail: {HasEmail}", 
+            user.PhoneNumber, !string.IsNullOrEmpty(user.Name), !string.IsNullOrEmpty(user.Email));
+        
+        try
         {
-            if (extractionResult.Name?.IsSuccessful == true)
+            // Try to extract user data using the hybrid extraction service
+            var extractionResult = await _userDataExtractionService.ExtractUserDataAsync(message, user.LanguageCode);
+            
+            _logger.LogDebug("Extraction completed - NameExtracted: {NameExtracted}, EmailExtracted: {EmailExtracted}", 
+                extractionResult.Name?.IsSuccessful == true, extractionResult.Email?.IsSuccessful == true);
+
+            // Handle name extraction when user doesn't have a name yet
+            if (string.IsNullOrEmpty(user.Name))
             {
-                var extractedName = extractionResult.Name.ExtractedValue!;
+                if (extractionResult.Name?.IsSuccessful == true)
+                {
+                    var extractedName = extractionResult.Name.ExtractedValue!;
+                    _logger.LogInformation("Extracted name '{Name}' for user {UserId} using {Method}", 
+                        extractedName, user.PhoneNumber, extractionResult.Name.Method);
+                    
+                    // If we also got email in the same message, update both
+                    if (extractionResult.Email?.IsSuccessful == true)
+                    {
+                        var extractedEmail = extractionResult.Email.ExtractedValue!;
+                        _logger.LogInformation("Completing registration with name '{Name}' and email '{Email}' for user {UserId}", 
+                            extractedName, extractedEmail, user.PhoneNumber);
+                        
+                        await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, extractedName, extractedEmail);
+                        var completionMessage = await _localizationService.GetLocalizedMessageAsync(
+                            LocalizationKeys.RegistrationComplete, user.LanguageCode, extractedName);
+                        await _twilioMessenger.SendMessageAsync(user.PhoneNumber, completionMessage);
+                        return;
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Updating name '{Name}' and requesting email for user {UserId}", 
+                            extractedName, user.PhoneNumber);
+                        
+                        // Just update name and ask for email
+                        await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, extractedName, string.Empty);
+                        var greetMessage = await _localizationService.GetLocalizedMessageAsync(
+                            LocalizationKeys.GreetWithName, user.LanguageCode, extractedName);
+                        await _twilioMessenger.SendMessageAsync(user.PhoneNumber, greetMessage);
+                        return;
+                    }
+                }
                 
-                // If we also got email in the same message, update both
+                _logger.LogDebug("No name extracted from message, requesting name from user {UserId}", user.PhoneNumber);
+                
+                // No name extracted, ask for name
+                var welcomeMessage = await _localizationService.GetLocalizedMessageAsync(
+                    LocalizationKeys.WelcomeMessage, user.LanguageCode);
+                await _twilioMessenger.SendMessageAsync(user.PhoneNumber, welcomeMessage);
+                return;
+            }
+
+            // Handle email extraction when user has name but no email
+            if (string.IsNullOrEmpty(user.Email))
+            {
                 if (extractionResult.Email?.IsSuccessful == true)
                 {
                     var extractedEmail = extractionResult.Email.ExtractedValue!;
-                    await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, extractedName, extractedEmail);
+                    _logger.LogInformation("Completing registration with email '{Email}' for user {UserId} (Name: '{Name}')", 
+                        extractedEmail, user.PhoneNumber, user.Name);
+                    
+                    await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, user.Name, extractedEmail);
                     var completionMessage = await _localizationService.GetLocalizedMessageAsync(
-                        LocalizationKeys.RegistrationComplete, user.LanguageCode, extractedName);
-                    await twilioMessenger.SendMessageAsync(user.PhoneNumber, completionMessage);
+                        LocalizationKeys.RegistrationComplete, user.LanguageCode, user.Name);
+                    await _twilioMessenger.SendMessageAsync(user.PhoneNumber, completionMessage);
                     return;
                 }
-                else
+                else if (extractionResult.Email != null && !extractionResult.Email.IsSuccessful)
                 {
-                    // Just update name and ask for email
-                    await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, extractedName, string.Empty);
-                    var greetMessage = await _localizationService.GetLocalizedMessageAsync(
-                        LocalizationKeys.GreetWithName, user.LanguageCode, extractedName);
-                    await twilioMessenger.SendMessageAsync(user.PhoneNumber, greetMessage);
+                    _logger.LogWarning("Email extraction failed for user {UserId}, sending invalid email message", user.PhoneNumber);
+                    
+                    // Extraction was attempted but failed
+                    var invalidEmailMessage = await _localizationService.GetLocalizedMessageAsync(
+                        LocalizationKeys.InvalidEmail, user.LanguageCode);
+                    await _twilioMessenger.SendMessageAsync(user.PhoneNumber, invalidEmailMessage);
                     return;
                 }
+                
+                _logger.LogDebug("No email extracted from message, requesting email from user {UserId}", user.PhoneNumber);
+                
+                // No email extracted, ask for email
+                var requestEmailMessage = await _localizationService.GetLocalizedMessageAsync(
+                    LocalizationKeys.RequestEmail, user.LanguageCode);
+                await _twilioMessenger.SendMessageAsync(user.PhoneNumber, requestEmailMessage);
+                return;
             }
-            
-            // No name extracted, ask for name
-            var welcomeMessage = await _localizationService.GetLocalizedMessageAsync(
-                LocalizationKeys.WelcomeMessage, user.LanguageCode);
-            await twilioMessenger.SendMessageAsync(user.PhoneNumber, welcomeMessage);
-            return;
         }
-
-        // Handle email extraction when user has name but no email
-        if (string.IsNullOrEmpty(user.Email))
+        catch (Exception ex)
         {
-            if (extractionResult.Email?.IsSuccessful == true)
-            {
-                var extractedEmail = extractionResult.Email.ExtractedValue!;
-                await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, user.Name, extractedEmail);
-                var completionMessage = await _localizationService.GetLocalizedMessageAsync(
-                    LocalizationKeys.RegistrationComplete, user.LanguageCode, user.Name);
-                await twilioMessenger.SendMessageAsync(user.PhoneNumber, completionMessage);
-                return;
-            }
-            else if (extractionResult.Email != null && !extractionResult.Email.IsSuccessful)
-            {
-                // Extraction was attempted but failed
-                var invalidEmailMessage = await _localizationService.GetLocalizedMessageAsync(
-                    LocalizationKeys.InvalidEmail, user.LanguageCode);
-                await twilioMessenger.SendMessageAsync(user.PhoneNumber, invalidEmailMessage);
-                return;
-            }
-            
-            // No email extracted, ask for email
-            var requestEmailMessage = await _localizationService.GetLocalizedMessageAsync(
-                LocalizationKeys.RequestEmail, user.LanguageCode);
-            await twilioMessenger.SendMessageAsync(user.PhoneNumber, requestEmailMessage);
-            return;
+            _logger.LogError(ex, "Error during registration process for user {UserId}", user.PhoneNumber);
+            throw;
         }
     }
 
@@ -175,13 +301,13 @@ public class OrchestrationService(ISemanticKernelService sk,
                     
                     var successMessage = await _localizationService.GetLocalizedMessageAsync(
                         LocalizationKeys.LanguageChanged, user.LanguageCode, supportedLanguage.ToDisplayName());
-                    await twilioMessenger.SendMessageAsync(user.PhoneNumber, successMessage);
+                    await _twilioMessenger.SendMessageAsync(user.PhoneNumber, successMessage);
                 }
                 else
                 {
                     var errorMessage = await _localizationService.GetLocalizedMessageAsync(
                         LocalizationKeys.LanguageNotSupported, user.LanguageCode);
-                    await twilioMessenger.SendMessageAsync(user.PhoneNumber, errorMessage);
+                    await _twilioMessenger.SendMessageAsync(user.PhoneNumber, errorMessage);
                 }
                 return true;
             }
@@ -198,11 +324,10 @@ public class OrchestrationService(ISemanticKernelService sk,
         {
             var helpMessage = await _localizationService.GetLocalizedMessageAsync(
                 LocalizationKeys.HelpMessage, user.LanguageCode);
-            await twilioMessenger.SendMessageAsync(user.PhoneNumber, helpMessage);
+            await _twilioMessenger.SendMessageAsync(user.PhoneNumber, helpMessage);
             return true;
         }
         
         return false;
     }
-
 }

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using WhatsAppAIAssistantBot.Application;
 using WhatsAppAIAssistantBot.Infrastructure;
 using WhatsAppAIAssistantBot.Domain.Services;
@@ -16,6 +17,7 @@ public class OrchestrationServiceTests
     private readonly Mock<ILocalizationService> _mockLocalizationService;
     private readonly Mock<IUserDataExtractionService> _mockUserDataExtractionService;
     private readonly Mock<IUserContextService> _mockUserContextService;
+    private readonly Mock<ILogger<OrchestrationService>> _mockLogger;
     private readonly OrchestrationService _orchestrationService;
 
     public OrchestrationServiceTests()
@@ -27,6 +29,7 @@ public class OrchestrationServiceTests
         _mockLocalizationService = new Mock<ILocalizationService>();
         _mockUserDataExtractionService = new Mock<IUserDataExtractionService>();
         _mockUserContextService = new Mock<IUserContextService>();
+        _mockLogger = new Mock<ILogger<OrchestrationService>>();
         
         _orchestrationService = new OrchestrationService(
             _mockSemanticKernel.Object,
@@ -35,7 +38,8 @@ public class OrchestrationServiceTests
             _mockUserStorageService.Object,
             _mockLocalizationService.Object,
             _mockUserDataExtractionService.Object,
-            _mockUserContextService.Object
+            _mockUserContextService.Object,
+            _mockLogger.Object
         );
     }
 
