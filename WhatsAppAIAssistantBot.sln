@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatsAppAIAssistantBot.Appl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatsAppAIAssistantBot.Domain", "src\WhatsAppAIAssistantBot.Domain\WhatsAppAIAssistantBot.Domain.csproj", "{4A829051-EDCE-45B8-B5B3-E6F8FF8612F4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatsAppAIAssistantBot.Tests", "src\WhatsAppAIAssistantBot.Tests\WhatsAppAIAssistantBot.Tests.csproj", "{9A651BFC-35A1-4D9A-A7BD-56807F6DD668}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,10 @@ Global
 		{4A829051-EDCE-45B8-B5B3-E6F8FF8612F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4A829051-EDCE-45B8-B5B3-E6F8FF8612F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4A829051-EDCE-45B8-B5B3-E6F8FF8612F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A651BFC-35A1-4D9A-A7BD-56807F6DD668}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9A651BFC-35A1-4D9A-A7BD-56807F6DD668}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9A651BFC-35A1-4D9A-A7BD-56807F6DD668}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9A651BFC-35A1-4D9A-A7BD-56807F6DD668}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -51,5 +57,6 @@ Global
 		{BDADFB26-9F59-40A5-80B8-B3C035D8C9D3} = {BD5D2562-8355-45AB-87AE-C3F0EABF11EC}
 		{876BA458-02B5-4B06-92D3-83827ABEF58C} = {BD5D2562-8355-45AB-87AE-C3F0EABF11EC}
 		{4A829051-EDCE-45B8-B5B3-E6F8FF8612F4} = {BD5D2562-8355-45AB-87AE-C3F0EABF11EC}
+		{9A651BFC-35A1-4D9A-A7BD-56807F6DD668} = {BD5D2562-8355-45AB-87AE-C3F0EABF11EC}
 	EndGlobalSection
 EndGlobal
