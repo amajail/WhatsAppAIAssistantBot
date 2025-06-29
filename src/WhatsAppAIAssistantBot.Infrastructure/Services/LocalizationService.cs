@@ -96,6 +96,7 @@ public class LocalizationService : ILocalizationService
             try
             {
                 var resourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", $"{languageCode}.json");
+                _logger.LogDebug("Trying resource path: {ResourcePath}", resourcePath);
                 
                 // If running from source, try relative path
                 if (!File.Exists(resourcePath))
@@ -103,6 +104,7 @@ public class LocalizationService : ILocalizationService
                     var assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
                     var assemblyDirectory = Path.GetDirectoryName(assemblyLocation);
                     resourcePath = Path.Combine(assemblyDirectory ?? string.Empty, "Resources", $"{languageCode}.json");
+                    _logger.LogDebug("Trying assembly resource path: {ResourcePath}", resourcePath);
                 }
                 
                 // Try project structure path
@@ -110,6 +112,7 @@ public class LocalizationService : ILocalizationService
                 {
                     var currentDirectory = Directory.GetCurrentDirectory();
                     resourcePath = Path.Combine(currentDirectory, "src", "WhatsAppAIAssistantBot.Infrastructure", "Resources", $"{languageCode}.json");
+                    _logger.LogDebug("Trying project structure path: {ResourcePath}", resourcePath);
                 }
                 
                 // Try Infrastructure project relative path
@@ -117,6 +120,23 @@ public class LocalizationService : ILocalizationService
                 {
                     var currentDirectory = Directory.GetCurrentDirectory();
                     resourcePath = Path.Combine(currentDirectory, "Resources", $"{languageCode}.json");
+                    _logger.LogDebug("Trying relative path: {ResourcePath}", resourcePath);
+                }
+                
+                // Try bin directory relative path (for production)
+                if (!File.Exists(resourcePath))
+                {
+                    var currentDirectory = Directory.GetCurrentDirectory();
+                    resourcePath = Path.Combine(currentDirectory, "bin", "Debug", "net8.0", "Resources", $"{languageCode}.json");
+                    _logger.LogDebug("Trying bin debug path: {ResourcePath}", resourcePath);
+                }
+                
+                // Try bin release directory relative path (for production)
+                if (!File.Exists(resourcePath))
+                {
+                    var currentDirectory = Directory.GetCurrentDirectory();
+                    resourcePath = Path.Combine(currentDirectory, "bin", "Release", "net8.0", "Resources", $"{languageCode}.json");
+                    _logger.LogDebug("Trying bin release path: {ResourcePath}", resourcePath);
                 }
                 
                 if (File.Exists(resourcePath))
@@ -132,10 +152,15 @@ public class LocalizationService : ILocalizationService
                 }
                 else
                 {
-                    _logger.LogWarning("Language resource file not found: {ResourcePath}", resourcePath);
+                    var currentDir = Directory.GetCurrentDirectory();
+                    var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                    _logger.LogWarning("Language resource file not found for '{Language}'. Searched paths included: {ResourcePath}. CurrentDir: {CurrentDir}, BaseDir: {BaseDir}. Using fallback messages.", 
+                        languageCode, resourcePath, currentDir, baseDir);
                     
                     // Create fallback messages
                     _messages[languageCode] = CreateFallbackMessages(languageCode);
+                    _logger.LogInformation("Created {Count} fallback messages for language '{Language}'", 
+                        _messages[languageCode].Count, languageCode);
                 }
             }
             catch (Exception ex)
@@ -158,7 +183,13 @@ public class LocalizationService : ILocalizationService
                 { LocalizationKeys.RequestName, "Por favor dime tu nombre." },
                 { LocalizationKeys.RequestEmail, "Por favor proporciona tu email." },
                 { LocalizationKeys.RegistrationComplete, "¡Gracias! Tu registro está completo." },
-                { LocalizationKeys.GeneralError, "Ha ocurrido un error." }
+                { LocalizationKeys.GeneralError, "Ha ocurrido un error." },
+                { LocalizationKeys.ContextTemplate, "[CONTEXTO DEL USUARIO: Nombre: {0}, Email: {1}, Idioma: {2}]\n\nMensaje del usuario: {3}" },
+                { LocalizationKeys.ContextTemplateMinimal, "[CONTEXTO DEL USUARIO: Nombre: {0}]\n\nMensaje del usuario: {1}" },
+                { LocalizationKeys.ContextTemplateFull, "[CONTEXTO DEL USUARIO: Nombre: {0}, Email: {1}, Idioma: {2}, Miembro desde: {3}, Zona horaria: {4}]\n\nMensaje del usuario: {5}" },
+                { LocalizationKeys.PersonalQuestionPatterns, "[\"mi nombre\", \"como me llamo\", \"cual es mi\", \"mi email\", \"mi correo\", \"quien soy\", \"mis datos\", \"mi información\"]" },
+                { LocalizationKeys.NameQuestionPatterns, "[\"mi nombre\", \"como me llamo\", \"quien soy\", \"mi nombre es\"]" },
+                { LocalizationKeys.EmailQuestionPatterns, "[\"mi email\", \"mi correo\", \"mi dirección de email\", \"como contactarme\"]" }
             },
             "en" => new Dictionary<string, string>
             {
@@ -166,7 +197,13 @@ public class LocalizationService : ILocalizationService
                 { LocalizationKeys.RequestName, "Please tell me your name." },
                 { LocalizationKeys.RequestEmail, "Please provide your email." },
                 { LocalizationKeys.RegistrationComplete, "Thank you! Your registration is complete." },
-                { LocalizationKeys.GeneralError, "An error occurred." }
+                { LocalizationKeys.GeneralError, "An error occurred." },
+                { LocalizationKeys.ContextTemplate, "[USER CONTEXT: Name: {0}, Email: {1}, Language: {2}]\n\nUser message: {3}" },
+                { LocalizationKeys.ContextTemplateMinimal, "[USER CONTEXT: Name: {0}]\n\nUser message: {1}" },
+                { LocalizationKeys.ContextTemplateFull, "[USER CONTEXT: Name: {0}, Email: {1}, Language: {2}, Member since: {3}, Timezone: {4}]\n\nUser message: {5}" },
+                { LocalizationKeys.PersonalQuestionPatterns, "[\"my name\", \"what's my\", \"what is my\", \"my email\", \"who am i\", \"my info\", \"my information\", \"about me\"]" },
+                { LocalizationKeys.NameQuestionPatterns, "[\"my name\", \"what's my name\", \"who am i\", \"what do you call me\"]" },
+                { LocalizationKeys.EmailQuestionPatterns, "[\"my email\", \"my email address\", \"how to contact me\", \"reach me\"]" }
             },
             _ => new Dictionary<string, string>()
         };
