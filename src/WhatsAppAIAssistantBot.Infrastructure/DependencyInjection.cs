@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WhatsAppAIAssistantBot.Domain.Services;
+using WhatsAppAIAssistantBot.Domain.Repositories;
 using WhatsAppAIAssistantBot.Infrastructure.Data;
 using WhatsAppAIAssistantBot.Infrastructure.Services;
+using WhatsAppAIAssistantBot.Infrastructure.Repositories;
 
 namespace WhatsAppAIAssistantBot.Infrastructure;
 
@@ -27,6 +29,10 @@ public static class DependencyInjection
             }
         });
 
+        // Register repositories
+        services.AddScoped<IUserRepository, UserRepository>();
+        
+        // Register services
         services.AddScoped<ITwilioMessenger, TwilioMessenger>();
         services.AddScoped<IUserStorageService, UserStorageService>();
 

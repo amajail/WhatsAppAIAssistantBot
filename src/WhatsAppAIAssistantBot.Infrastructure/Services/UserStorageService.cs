@@ -1,56 +1,49 @@
-using Microsoft.EntityFrameworkCore;
 using WhatsAppAIAssistantBot.Domain.Entities;
 using WhatsAppAIAssistantBot.Domain.Services;
-using WhatsAppAIAssistantBot.Infrastructure.Data;
+using WhatsAppAIAssistantBot.Domain.Repositories;
 
 namespace WhatsAppAIAssistantBot.Infrastructure.Services;
 
 public class UserStorageService : IUserStorageService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IUserRepository _userRepository;
 
-    public UserStorageService(ApplicationDbContext context)
+    public UserStorageService(IUserRepository userRepository)
     {
-        _context = context;
+        _userRepository = userRepository;
     }
 
     public async Task<User?> GetUserByPhoneNumberAsync(string phoneNumber)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+        return await _userRepository.GetByPhoneNumberAsync(phoneNumber);
     }
 
     public async Task<User> CreateOrUpdateUserAsync(User user)
     {
-        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.PhoneNumber == user.PhoneNumber);
+        var existingUser = await _userRepository.GetByPhoneNumberAsync(user.PhoneNumber);
         
         if (existingUser == null)
         {
-            user.CreatedAt = DateTime.UtcNow;
-            user.UpdatedAt = DateTime.UtcNow;
-            _context.Users.Add(user);
+            return await _userRepository.AddAsync(user);
         }
         else
         {
+            // Update existing user properties
             existingUser.ThreadId = user.ThreadId;
             existingUser.Name = user.Name ?? existingUser.Name;
             existingUser.Email = user.Email ?? existingUser.Email;
-            existingUser.UpdatedAt = DateTime.UtcNow;
-            user = existingUser;
+            return await _userRepository.UpdateAsync(existingUser);
         }
-
-        await _context.SaveChangesAsync();
-        return user;
     }
 
     public async Task UpdateUserRegistrationAsync(string phoneNumber, string name, string email)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+        var user = await _userRepository.GetByPhoneNumberAsync(phoneNumber);
         if (user != null)
         {
             user.Name = name;
             user.Email = email;
-            user.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await _userRepository.UpdateAsync(user);
         }
     }
 }
