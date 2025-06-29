@@ -10,6 +10,7 @@ public interface IAssistantService
 {
     Task<string> CreateOrGetThreadAsync(string userId);
     Task<string> GetAssistantReplyAsync(string threadId, string userMessage);
+    Task<string> GetAssistantReplyWithContextAsync(string threadId, string contextualMessage);
 }
 
 public class AssistantOpenAIService : IAssistantService
@@ -76,16 +77,19 @@ public class AssistantOpenAIService : IAssistantService
 
     public async Task<string> GetAssistantReplyAsync(string threadId, string userMessage)
     {
+        return await GetAssistantReplyWithContextAsync(threadId, userMessage);
+    }
+
+    public async Task<string> GetAssistantReplyWithContextAsync(string threadId, string contextualMessage)
+    {
         try
         {
-            // Removed duplicate client creation - using class fields instead
-
-            // Add the user message to the thread
+            // Add the contextual message to the thread
 #pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             await assistantClient.CreateMessageAsync(
                 threadId,
                 MessageRole.User,
-                [MessageContent.FromText(userMessage)]
+                [MessageContent.FromText(contextualMessage)]
             );
             // Run the assistant on the thread
             var threadRun = await assistantClient.CreateRunAsync(threadId, assistantId);
@@ -102,7 +106,6 @@ public class AssistantOpenAIService : IAssistantService
             {
                 throw new InvalidOperationException($"Assistant run failed: {threadRun.Value.LastError?.Message}");
             }
-
 
             // Get the latest messages from the thread
             var messages = assistantClient.GetMessagesAsync(threadId);

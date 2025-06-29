@@ -16,5 +16,25 @@
   "available_commands": "Available commands: /lang, /help",
   
   "general_error": "An error occurred. Please try again.",
-  "service_unavailable": "The service is not available at the moment. Please try later."
+  "service_unavailable": "The service is not available at the moment. Please try later.",
+  
+  "name_patterns": ["name:", "my name is", "i am", "i'm", "call me"],
+  "email_patterns": ["email:", "my email is", "contact me at", "reach me at"],
+  
+  "llm_extract_name_prompt": "Extract only the person's name from the following message. If no name is found, respond 'NO_NAME_FOUND'. Message: {0}",
+  "llm_extract_email_prompt": "Extract only the email address from the following message. If no email is found, respond 'NO_EMAIL_FOUND'. Message: {0}",
+  "llm_extract_both_prompt": "Extract the name and email from the following message. Respond in JSON format: {{\"name\": \"name or null\", \"email\": \"email or null\"}}. Message: {0}",
+  
+  "confirm_extracted_data": "I understood that your name is {0} and your email is {1}. Is this correct?",
+  "confirm_extracted_name": "I understood that your name is {0}. Is this correct?",
+  "confirm_extracted_email": "I understood that your email is {0}. Is this correct?",
+  "extraction_failed": "I couldn't understand your message. Please provide your information more clearly.",
+  
+  "context_template": "[USER CONTEXT: Name: {0}, Email: {1}, Language: {2}]\n\nUser message: {3}",
+  "context_template_minimal": "[USER CONTEXT: Name: {0}]\n\nUser message: {1}",
+  "context_template_full": "[USER CONTEXT: Name: {0}, Email: {1}, Language: {2}, Member since: {3}, Timezone: {4}]\n\nUser message: {5}",
+  
+  "personal_question_patterns": ["my name", "what's my", "what is my", "my email", "who am i", "my info", "my information", "about me"],
+  "name_question_patterns": ["my name", "what's my name", "who am i", "what do you call me"],
+  "email_question_patterns": ["my email", "my email address", "how to contact me", "reach me"]
 }

@@ -14,12 +14,16 @@ public class OrchestrationService(ISemanticKernelService sk,
                                   IAssistantService assistant,
                                   ITwilioMessenger twilioMessenger,
                                   IUserStorageService userStorageService,
-                                  ILocalizationService localizationService) : IOrchestrationService
+                                  ILocalizationService localizationService,
+                                  IUserDataExtractionService userDataExtractionService,
+                                  IUserContextService userContextService) : IOrchestrationService
 {
     private readonly ISemanticKernelService _sk = sk;
     private readonly IAssistantService _assistant = assistant;
     private readonly IUserStorageService _userStorageService = userStorageService;
     private readonly ILocalizationService _localizationService = localizationService;
+    private readonly IUserDataExtractionService _userDataExtractionService = userDataExtractionService;
+    private readonly IUserContextService _userContextService = userContextService;
 
     public async Task HandleMessageAsync(string userId, string message)
     {
@@ -66,56 +70,84 @@ public class OrchestrationService(ISemanticKernelService sk,
         //     return await _sk.RunLocalSkillAsync(message);
         // }
 
-        var reply = await _assistant.GetAssistantReplyAsync(threadId, message);
+        // Use context-aware LLM interaction for registered users
+        string reply;
+        if (await _userContextService.ShouldIncludeContextAsync(message))
+        {
+            var contextLevel = await _userContextService.DetermineContextLevelAsync(message);
+            var contextualMessage = await _userContextService.FormatUserContextAsync(user, message, contextLevel);
+            reply = await _assistant.GetAssistantReplyWithContextAsync(threadId, contextualMessage);
+        }
+        else
+        {
+            reply = await _assistant.GetAssistantReplyAsync(threadId, message);
+        }
+        
         await twilioMessenger.SendMessageAsync(userId, reply);
     }
 
     private async Task HandleUserRegistrationAsync(User user, string message)
     {
+        // Try to extract user data using the hybrid extraction service
+        var extractionResult = await _userDataExtractionService.ExtractUserDataAsync(message, user.LanguageCode);
+
+        // Handle name extraction when user doesn't have a name yet
         if (string.IsNullOrEmpty(user.Name))
         {
-            if (message.ToLower().StartsWith("name:") || message.ToLower().StartsWith("my name is") ||
-                message.ToLower().StartsWith("nombre:") || message.ToLower().StartsWith("mi nombre es"))
+            if (extractionResult.Name?.IsSuccessful == true)
             {
-                var name = ExtractNameFromMessage(message);
-                if (!string.IsNullOrEmpty(name))
+                var extractedName = extractionResult.Name.ExtractedValue!;
+                
+                // If we also got email in the same message, update both
+                if (extractionResult.Email?.IsSuccessful == true)
                 {
-                    await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, name, user.Email ?? string.Empty);
+                    var extractedEmail = extractionResult.Email.ExtractedValue!;
+                    await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, extractedName, extractedEmail);
+                    var completionMessage = await _localizationService.GetLocalizedMessageAsync(
+                        LocalizationKeys.RegistrationComplete, user.LanguageCode, extractedName);
+                    await twilioMessenger.SendMessageAsync(user.PhoneNumber, completionMessage);
+                    return;
+                }
+                else
+                {
+                    // Just update name and ask for email
+                    await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, extractedName, string.Empty);
                     var greetMessage = await _localizationService.GetLocalizedMessageAsync(
-                        LocalizationKeys.GreetWithName, user.LanguageCode, name);
+                        LocalizationKeys.GreetWithName, user.LanguageCode, extractedName);
                     await twilioMessenger.SendMessageAsync(user.PhoneNumber, greetMessage);
                     return;
                 }
             }
             
+            // No name extracted, ask for name
             var welcomeMessage = await _localizationService.GetLocalizedMessageAsync(
                 LocalizationKeys.WelcomeMessage, user.LanguageCode);
             await twilioMessenger.SendMessageAsync(user.PhoneNumber, welcomeMessage);
             return;
         }
 
+        // Handle email extraction when user has name but no email
         if (string.IsNullOrEmpty(user.Email))
         {
-            if (message.ToLower().StartsWith("email:") || message.ToLower().StartsWith("correo:"))
+            if (extractionResult.Email?.IsSuccessful == true)
             {
-                var email = ExtractEmailFromMessage(message);
-                if (!string.IsNullOrEmpty(email) && IsValidEmail(email))
-                {
-                    await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, user.Name, email);
-                    var completionMessage = await _localizationService.GetLocalizedMessageAsync(
-                        LocalizationKeys.RegistrationComplete, user.LanguageCode, user.Name);
-                    await twilioMessenger.SendMessageAsync(user.PhoneNumber, completionMessage);
-                    return;
-                }
-                else
-                {
-                    var invalidEmailMessage = await _localizationService.GetLocalizedMessageAsync(
-                        LocalizationKeys.InvalidEmail, user.LanguageCode);
-                    await twilioMessenger.SendMessageAsync(user.PhoneNumber, invalidEmailMessage);
-                    return;
-                }
+                var extractedEmail = extractionResult.Email.ExtractedValue!;
+                await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, user.Name, extractedEmail);
+                var completionMessage = await _localizationService.GetLocalizedMessageAsync(
+                    LocalizationKeys.RegistrationComplete, user.LanguageCode, user.Name);
+                await twilioMessenger.SendMessageAsync(user.PhoneNumber, completionMessage);
+                return;
+            }
+            else if (extractionResult.Email != null && !extractionResult.Email.IsSuccessful)
+            {
+                // Extraction was attempted but failed
+                var invalidEmailMessage = await _localizationService.GetLocalizedMessageAsync(
+                    LocalizationKeys.InvalidEmail, user.LanguageCode);
+                await twilioMessenger.SendMessageAsync(user.PhoneNumber, invalidEmailMessage);
+                return;
             }
             
+            // No email extracted, ask for email
             var requestEmailMessage = await _localizationService.GetLocalizedMessageAsync(
                 LocalizationKeys.RequestEmail, user.LanguageCode);
             await twilioMessenger.SendMessageAsync(user.PhoneNumber, requestEmailMessage);
@@ -173,54 +205,4 @@ public class OrchestrationService(ISemanticKernelService sk,
         return false;
     }
 
-    private static string ExtractNameFromMessage(string message)
-    {
-        var lowerMessage = message.ToLower();
-        
-        if (lowerMessage.StartsWith("name:"))
-        {
-            return message.Substring(5).Trim();
-        }
-        if (lowerMessage.StartsWith("my name is"))
-        {
-            return message.Substring(10).Trim();
-        }
-        if (lowerMessage.StartsWith("nombre:"))
-        {
-            return message.Substring(7).Trim();
-        }
-        if (lowerMessage.StartsWith("mi nombre es"))
-        {
-            return message.Substring(12).Trim();
-        }
-        return string.Empty;
-    }
-
-    private static string ExtractEmailFromMessage(string message)
-    {
-        var lowerMessage = message.ToLower();
-        
-        if (lowerMessage.StartsWith("email:"))
-        {
-            return message.Substring(6).Trim();
-        }
-        if (lowerMessage.StartsWith("correo:"))
-        {
-            return message.Substring(7).Trim();
-        }
-        return string.Empty;
-    }
-
-    private static bool IsValidEmail(string email)
-    {
-        try
-        {
-            var addr = new System.Net.Mail.MailAddress(email);
-            return addr.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
-    }
 }

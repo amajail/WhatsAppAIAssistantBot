@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WhatsAppAIAssistantBot.Infrastructure;
+using WhatsAppAIAssistantBot.Domain.Services;
 
 namespace WhatsAppAIAssistantBot.Application;
 
@@ -15,6 +16,8 @@ public static class DependencyInjection
         services.AddScoped<ISemanticKernelService, SemanticKernelService>();
         services.AddScoped<IAssistantService, AssistantOpenAIService>();
         services.AddScoped<IOrchestrationService, OrchestrationService>();
+        services.AddScoped<IUserDataExtractionService, Services.UserDataExtractionService>();
+        services.AddScoped<IUserContextService, Services.UserContextService>();
 
         return services;
     }

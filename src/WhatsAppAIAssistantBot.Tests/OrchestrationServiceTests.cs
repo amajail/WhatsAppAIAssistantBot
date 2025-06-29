@@ -14,6 +14,8 @@ public class OrchestrationServiceTests
     private readonly Mock<ITwilioMessenger> _mockTwilioMessenger;
     private readonly Mock<IUserStorageService> _mockUserStorageService;
     private readonly Mock<ILocalizationService> _mockLocalizationService;
+    private readonly Mock<IUserDataExtractionService> _mockUserDataExtractionService;
+    private readonly Mock<IUserContextService> _mockUserContextService;
     private readonly OrchestrationService _orchestrationService;
 
     public OrchestrationServiceTests()
@@ -23,13 +25,17 @@ public class OrchestrationServiceTests
         _mockTwilioMessenger = new Mock<ITwilioMessenger>();
         _mockUserStorageService = new Mock<IUserStorageService>();
         _mockLocalizationService = new Mock<ILocalizationService>();
+        _mockUserDataExtractionService = new Mock<IUserDataExtractionService>();
+        _mockUserContextService = new Mock<IUserContextService>();
         
         _orchestrationService = new OrchestrationService(
             _mockSemanticKernel.Object,
             _mockAssistant.Object,
             _mockTwilioMessenger.Object,
             _mockUserStorageService.Object,
-            _mockLocalizationService.Object
+            _mockLocalizationService.Object,
+            _mockUserDataExtractionService.Object,
+            _mockUserContextService.Object
         );
     }
 
@@ -41,6 +47,7 @@ public class OrchestrationServiceTests
         var message = "Hello, how are you?";
         var threadId = "thread_123";
         var reply = "I'm doing well, thank you!";
+        var contextualMessage = "[USER CONTEXT: Name: John Doe, Email: john@example.com, Language: English]\n\nUser message: Hello, how are you?";
         var registeredUser = new User
         {
             PhoneNumber = userId,
@@ -56,8 +63,17 @@ public class OrchestrationServiceTests
         
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(registeredUser);
+
+        _mockUserContextService.Setup(x => x.ShouldIncludeContextAsync(message))
+            .ReturnsAsync(true);
+
+        _mockUserContextService.Setup(x => x.DetermineContextLevelAsync(message))
+            .ReturnsAsync(ContextLevel.Standard);
+
+        _mockUserContextService.Setup(x => x.FormatUserContextAsync(registeredUser, message, ContextLevel.Standard))
+            .ReturnsAsync(contextualMessage);
         
-        _mockAssistant.Setup(x => x.GetAssistantReplyAsync(threadId, message))
+        _mockAssistant.Setup(x => x.GetAssistantReplyWithContextAsync(threadId, contextualMessage))
             .ReturnsAsync(reply);
 
         // Act
@@ -66,7 +82,10 @@ public class OrchestrationServiceTests
         // Assert
         _mockAssistant.Verify(x => x.CreateOrGetThreadAsync(userId), Times.Once);
         _mockUserStorageService.Verify(x => x.GetUserByPhoneNumberAsync(userId), Times.Once);
-        _mockAssistant.Verify(x => x.GetAssistantReplyAsync(threadId, message), Times.Once);
+        _mockUserContextService.Verify(x => x.ShouldIncludeContextAsync(message), Times.Once);
+        _mockUserContextService.Verify(x => x.DetermineContextLevelAsync(message), Times.Once);
+        _mockUserContextService.Verify(x => x.FormatUserContextAsync(registeredUser, message, ContextLevel.Standard), Times.Once);
+        _mockAssistant.Verify(x => x.GetAssistantReplyWithContextAsync(threadId, contextualMessage), Times.Once);
         _mockTwilioMessenger.Verify(x => x.SendMessageAsync(userId, reply), Times.Once);
     }
 
@@ -85,11 +104,16 @@ public class OrchestrationServiceTests
             UpdatedAt = DateTime.UtcNow
         };
 
+        var extractionResult = new UserDataExtractionResult(); // No data extracted
+
         _mockAssistant.Setup(x => x.CreateOrGetThreadAsync(userId))
             .ReturnsAsync(threadId);
         
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(newUser);
+
+        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(message, "es"))
+            .ReturnsAsync(extractionResult);
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
             LocalizationKeys.WelcomeMessage, "es"))
@@ -120,8 +144,24 @@ public class OrchestrationServiceTests
             UpdatedAt = DateTime.UtcNow
         };
 
+        var extractionResult = new UserDataExtractionResult
+        {
+            Name = new ExtractionResult
+            {
+                ExtractedValue = "John Doe",
+                Method = ExtractionMethod.PatternMatching,
+                Confidence = 0.9
+            }
+        };
+
+        _mockAssistant.Setup(x => x.CreateOrGetThreadAsync(userId))
+            .ReturnsAsync(threadId);
+
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(unregisteredUser);
+
+        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(message, "es"))
+            .ReturnsAsync(extractionResult);
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
             LocalizationKeys.GreetWithName, "es", "John Doe"))
@@ -152,8 +192,24 @@ public class OrchestrationServiceTests
             UpdatedAt = DateTime.UtcNow
         };
 
+        var extractionResult = new UserDataExtractionResult
+        {
+            Email = new ExtractionResult
+            {
+                ExtractedValue = "john@example.com",
+                Method = ExtractionMethod.PatternMatching,
+                Confidence = 0.9
+            }
+        };
+
+        _mockAssistant.Setup(x => x.CreateOrGetThreadAsync(userId))
+            .ReturnsAsync(threadId);
+
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(userWithName);
+
+        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(message, "es"))
+            .ReturnsAsync(extractionResult);
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
             LocalizationKeys.RegistrationComplete, "es", "John Doe"))

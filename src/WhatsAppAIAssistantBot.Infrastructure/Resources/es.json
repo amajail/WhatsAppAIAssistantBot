@@ -16,5 +16,25 @@
   "available_commands": "Comandos disponibles: /idioma, /ayuda",
   
   "general_error": "Ha ocurrido un error. Por favor intenta de nuevo.",
-  "service_unavailable": "El servicio no está disponible en este momento. Por favor intenta más tarde."
+  "service_unavailable": "El servicio no está disponible en este momento. Por favor intenta más tarde.",
+  
+  "name_patterns": ["nombre:", "mi nombre es", "soy", "me llamo"],
+  "email_patterns": ["email:", "correo:", "mi correo es", "mi email es", "contactame en"],
+  
+  "llm_extract_name_prompt": "Extrae solo el nombre de la persona del siguiente mensaje. Si no hay nombre, responde 'NO_NAME_FOUND'. Mensaje: {0}",
+  "llm_extract_email_prompt": "Extrae solo la dirección de email del siguiente mensaje. Si no hay email, responde 'NO_EMAIL_FOUND'. Mensaje: {0}",
+  "llm_extract_both_prompt": "Extrae el nombre y email del siguiente mensaje. Responde en formato JSON: {{\"name\": \"nombre o null\", \"email\": \"email o null\"}}. Mensaje: {0}",
+  
+  "confirm_extracted_data": "He entendido que tu nombre es {0} y tu email es {1}. ¿Es correcto?",
+  "confirm_extracted_name": "He entendido que tu nombre es {0}. ¿Es correcto?",
+  "confirm_extracted_email": "He entendido que tu email es {0}. ¿Es correcto?",
+  "extraction_failed": "No pude entender tu mensaje. Por favor proporciona tu información de forma más clara.",
+  
+  "context_template": "[CONTEXTO DEL USUARIO: Nombre: {0}, Email: {1}, Idioma: {2}]\n\nMensaje del usuario: {3}",
+  "context_template_minimal": "[CONTEXTO DEL USUARIO: Nombre: {0}]\n\nMensaje del usuario: {1}",
+  "context_template_full": "[CONTEXTO DEL USUARIO: Nombre: {0}, Email: {1}, Idioma: {2}, Miembro desde: {3}, Zona horaria: {4}]\n\nMensaje del usuario: {5}",
+  
+  "personal_question_patterns": ["mi nombre", "como me llamo", "cual es mi", "mi email", "mi correo", "quien soy", "mis datos", "mi información"],
+  "name_question_patterns": ["mi nombre", "como me llamo", "quien soy", "mi nombre es"],
+  "email_question_patterns": ["mi email", "mi correo", "mi dirección de email", "como contactarme"]
 }
