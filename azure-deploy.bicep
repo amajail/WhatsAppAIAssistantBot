@@ -5,7 +5,7 @@ param appServiceName string = 'whatsapp-ai-bot-${uniqueString(resourceGroup().id
 param location string = resourceGroup().location
 
 @description('SKU for the App Service Plan')
-param skuName string = 'B1'
+param skuName string = 'F1'
 
 @description('App Service Plan name')
 param appServicePlanName string = '${appServiceName}-plan'
@@ -29,7 +29,7 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
     serverFarmId: appServicePlan.id
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|8.0'
-      alwaysOn: true
+      alwaysOn: false
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       appSettings: [

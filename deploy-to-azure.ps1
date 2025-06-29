@@ -35,11 +35,11 @@ $deployment = New-AzResourceGroupDeployment `
     -location $Location
 
 if ($deployment.ProvisioningState -eq "Succeeded") {
-    Write-Host "✅ Azure resources deployed successfully!"
+    Write-Host "Azure resources deployed successfully!"
     Write-Host "App Service URL: $($deployment.Outputs.appServiceUrl.Value)"
     Write-Host "App Service Name: $($deployment.Outputs.appServiceName.Value)"
     
-    Write-Host "`n📋 Next steps:"
+    Write-Host "`nNext steps:"
     Write-Host "1. Configure app settings in Azure Portal:"
     Write-Host "   - OpenAI__ApiKey: Your OpenAI API key"
     Write-Host "   - OpenAI__AssistantId: Your OpenAI Assistant ID"
@@ -49,5 +49,5 @@ if ($deployment.ProvisioningState -eq "Succeeded") {
     Write-Host "2. Deploy your code using GitHub Actions or Azure CLI"
     Write-Host "3. Configure Twilio webhook to point to: $($deployment.Outputs.appServiceUrl.Value)/api/whatsapp"
 } else {
-    Write-Host "❌ Deployment failed: $($deployment.ProvisioningState)"
+    Write-Host "Deployment failed: $($deployment.ProvisioningState)"
 }
