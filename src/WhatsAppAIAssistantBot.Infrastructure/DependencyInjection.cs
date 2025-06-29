@@ -1,20 +1,34 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using WhatsAppAIAssistantBot.Domain.Services;
+using WhatsAppAIAssistantBot.Infrastructure.Data;
+using WhatsAppAIAssistantBot.Infrastructure.Services;
 
 namespace WhatsAppAIAssistantBot.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddWhatsAppAIAssistantBotInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddWhatsAppAIAssistantBotInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // services.AddRedisServices(); // Uncomment and implement AddRedisServices if needed
-        // Add other services as needed
-        services.AddScoped<ITwilioMessenger, TwilioMessenger>();
-        
-        //config redis
-        services.AddStackExchangeRedisCache(options =>
+        // Add Entity Framework DbContext
+        services.AddDbContext<ApplicationDbContext>(options =>
         {
-            options.Configuration = "localhost:6379"; // Update with your Redis configuration
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            if (connectionString?.Contains("Data Source") == true)
+            {
+                // SQLite connection
+                options.UseSqlite(connectionString);
+            }
+            else
+            {
+                // SQL Server connection for Azure
+                options.UseSqlServer(connectionString);
+            }
         });
+
+        services.AddScoped<ITwilioMessenger, TwilioMessenger>();
+        services.AddScoped<IUserStorageService, UserStorageService>();
 
         return services;
     }

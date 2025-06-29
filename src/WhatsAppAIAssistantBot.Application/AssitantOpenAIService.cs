@@ -1,7 +1,8 @@
 using System.ClientModel;
-using System.Collections.Concurrent; // Added missing import
 using Microsoft.Extensions.Configuration;
 using OpenAI.Assistants;
+using WhatsAppAIAssistantBot.Domain.Services;
+using WhatsAppAIAssistantBot.Domain.Entities;
 
 namespace WhatsAppAIAssistantBot.Application;
 
@@ -14,19 +15,20 @@ public interface IAssistantService
 public class AssistantOpenAIService : IAssistantService
 {
     private readonly IConfiguration configuration;
+    private readonly IUserStorageService _userStorageService;
     private readonly string apiKey;
     private readonly string assistantId;
     private readonly OpenAI.OpenAIClient openAIClient;
 #pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     private readonly AssistantClient assistantClient;
 #pragma warning restore OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-    private readonly ConcurrentDictionary<string, string> _userThreads = new();
 
     // Suppress warning for evaluation-only API usage
 #pragma warning disable OPENAI001
-    public AssistantOpenAIService(IConfiguration configuration)
+    public AssistantOpenAIService(IConfiguration configuration, IUserStorageService userStorageService)
     {
         this.configuration = configuration;
+        _userStorageService = userStorageService;
         apiKey = configuration["OpenAI:ApiKey"] ?? throw new InvalidOperationException("OpenAI API key is not configured.");
         assistantId = configuration["OpenAI:AssistantId"] ?? throw new InvalidOperationException("OpenAI Assistant ID is not configured.");
         openAIClient = new OpenAI.OpenAIClient(new ApiKeyCredential(apiKey));
@@ -38,18 +40,36 @@ public class AssistantOpenAIService : IAssistantService
     // and return the thread ID.
     public async Task<string> CreateOrGetThreadAsync(string userId)
     {
-        // If the thread already exists for this user, return it
-        if (_userThreads.TryGetValue(userId, out var threadId))
+        // Check if user already exists in database with a thread
+        var existingUser = await _userStorageService.GetUserByPhoneNumberAsync(userId);
+        if (existingUser != null && !string.IsNullOrEmpty(existingUser.ThreadId))
         {
-            return await Task.FromResult(threadId);
+            return existingUser.ThreadId;
         }
 
-        // Create a new thread - Fixed: added await
+        // Create a new OpenAI thread
         var threadResult = await assistantClient.CreateThreadAsync();
         var newThreadId = threadResult.Value.Id;
 
-        // Store the mapping
-        _userThreads[userId] = newThreadId;
+        // Store or update the user with the new thread ID
+        if (existingUser != null)
+        {
+            // Update existing user's thread ID
+            existingUser.ThreadId = newThreadId;
+            await _userStorageService.CreateOrUpdateUserAsync(existingUser);
+        }
+        else
+        {
+            // Create new user with thread ID
+            var newUser = new User
+            {
+                PhoneNumber = userId,
+                ThreadId = newThreadId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await _userStorageService.CreateOrUpdateUserAsync(newUser);
+        }
 
         return newThreadId;
     }

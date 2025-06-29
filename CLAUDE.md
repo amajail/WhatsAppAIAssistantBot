@@ -119,6 +119,71 @@ Key NuGet packages:
 
 The API includes Swagger UI available at `/swagger` in development mode.
 
+## Database
+
+The application uses Entity Framework Core with a dual database strategy:
+
+### Current Setup
+- **Development**: SQLite database (`whatsapp_bot.db`)
+- **Production Ready**: Azure SQL Database support
+- **Auto-migration**: Database schema updates automatically on startup
+- **User Storage**: Stores phone numbers, thread IDs, names, emails, and registration status
+
+### User Registration Flow
+- **New users**: Bot requests name first ("Name: John Doe" or "My name is John Doe")
+- **Email collection**: After name, requests email ("Email: user@example.com")
+- **Validation**: Basic email format validation using MailAddress
+- **Persistence**: User data stored across application restarts
+
+### Database Migration Path
+
+#### When to Upgrade from SQLite to Azure SQL Database
+
+**🟢 Start with SQLite when:**
+- Testing/prototyping your bot
+- < 50 active users
+- Simple WhatsApp conversations
+- Want to keep costs low initially
+
+**🟡 Consider upgrading when you hit:**
+- **Performance Issues**: App becomes slow responding to messages, database operations take > 1 second
+- **Scale Indicators**: 100+ active users, 1000+ messages per day, multiple app instances needed
+- **Business Growth**: Bot becomes business-critical, need backups and disaster recovery
+
+**🔴 Must upgrade when:**
+- **File size > 100MB** (SQLite performance degrades)
+- **Concurrent connection errors** (SQLite locks)
+- **Data loss occurs** during Azure deployments
+- Need **multi-region deployment**
+
+#### Monitoring for Upgrade Signals
+1. **Database file size**: Check `whatsapp_bot.db` file size
+2. **Response times**: Monitor via Application Insights
+3. **User count**: Track registered users in your database
+4. **Message volume**: Daily message counts
+
+#### Easy Migration to Azure SQL
+When ready to upgrade:
+1. Create Azure SQL Database resources
+2. Update connection string in Azure App Settings to SQL Server format
+3. Deploy - auto-migration will handle schema creation
+4. Verify data migrated correctly
+
+The current setup supports both databases seamlessly - just change the connection string!
+
+### Database Commands
+
+```bash
+# Create new migration
+dotnet ef migrations add MigrationName --project src/WhatsAppAIAssistantBot.Infrastructure --startup-project src/WhatsAppAIAssistantBot.Api
+
+# Update database manually (optional - auto-migration handles this)
+dotnet ef database update --project src/WhatsAppAIAssistantBot.Infrastructure --startup-project src/WhatsAppAIAssistantBot.Api
+
+# Remove last migration
+dotnet ef migrations remove --project src/WhatsAppAIAssistantBot.Infrastructure --startup-project src/WhatsAppAIAssistantBot.Api
+```
+
 ## Monitoring
 
 Application Insights is integrated for telemetry and monitoring:

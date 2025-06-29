@@ -6,6 +6,7 @@
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.55.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\WhatsAppAIAssistantBot.Domain\WhatsAppAIAssistantBot.Domain.csproj" />
     <ProjectReference Include="..\WhatsAppAIAssistantBot.Infrastructure\WhatsAppAIAssistantBot.Infrastructure.csproj" />
   </ItemGroup>
   <PropertyGroup>
