@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using WhatsAppAIAssistantBot.Infrastructure;
 using WhatsAppAIAssistantBot.Domain.Services;
 
@@ -7,10 +8,10 @@ namespace WhatsAppAIAssistantBot.Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddWhatsAppAIAssistantBotApplication(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddWhatsAppAIAssistantBotApplication(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         // Register infrastructure services first
-        services.AddWhatsAppAIAssistantBotInfrastructure(configuration);
+        services.AddWhatsAppAIAssistantBotInfrastructure(configuration, environment);
         
         // Register application/business logic services
         services.AddScoped<ISemanticKernelService, SemanticKernelService>();

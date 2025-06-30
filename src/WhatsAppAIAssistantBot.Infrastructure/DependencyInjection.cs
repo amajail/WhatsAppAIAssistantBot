@@ -1,17 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using WhatsAppAIAssistantBot.Domain.Services;
 using WhatsAppAIAssistantBot.Domain.Repositories;
 using WhatsAppAIAssistantBot.Infrastructure.Data;
 using WhatsAppAIAssistantBot.Infrastructure.Services;
 using WhatsAppAIAssistantBot.Infrastructure.Repositories;
+using WhatsAppAIAssistantBot.Infrastructure.Mock;
 
 namespace WhatsAppAIAssistantBot.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddWhatsAppAIAssistantBotInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddWhatsAppAIAssistantBotInfrastructure(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         // Add Entity Framework DbContext
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -33,7 +35,15 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         
         // Register services
-        services.AddScoped<ITwilioMessenger, TwilioMessenger>();
+        if (environment.IsDevelopment())
+        {
+            services.AddScoped<ITwilioMessenger, MockTwilioMessenger>();
+        }
+        else
+        {
+            services.AddScoped<ITwilioMessenger, TwilioMessenger>();
+        }
+        
         services.AddScoped<IUserStorageService, UserStorageService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
 

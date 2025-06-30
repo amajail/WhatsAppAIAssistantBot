@@ -36,6 +36,8 @@ packages/
 # Publish results
 publish/
 *.db
+*.db-shm
+*.db-wal
 
 # Test results
 TestResults/

@@ -10,7 +10,7 @@ builder.Services.AddApplicationInsightsTelemetry();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddWhatsAppAIAssistantBotApplication(builder.Configuration);
+builder.Services.AddWhatsAppAIAssistantBotApplication(builder.Configuration, builder.Environment);
 
 builder.Services.AddTransient((serviceProvider) =>
 {
