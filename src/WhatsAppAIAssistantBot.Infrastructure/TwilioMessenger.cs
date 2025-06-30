@@ -6,30 +6,59 @@ using Microsoft.Extensions.Logging;
 
 namespace WhatsAppAIAssistantBot.Infrastructure;
 
-public class TwilioMessenger(IConfiguration configuration, ILogger<TwilioMessenger> logger) : ITwilioMessenger
+public class TwilioMessenger : ITwilioMessenger
 {
-    private readonly ILogger<TwilioMessenger> _logger = logger;
+    private readonly ILogger<TwilioMessenger> _logger;
+    private readonly string _accountSid;
+    private readonly string _authToken;
+    private readonly string _fromNumber;
+    private readonly bool _isInitialized;
+
+    public TwilioMessenger(IConfiguration configuration, ILogger<TwilioMessenger> logger)
+    {
+        _logger = logger;
+        
+        try
+        {
+            _accountSid = configuration["Twilio:AccountSid"];
+            if (string.IsNullOrWhiteSpace(_accountSid))
+                throw new InvalidOperationException("Twilio Account SID is not configured.");
+            
+            _authToken = configuration["Twilio:AuthToken"];
+            if (string.IsNullOrWhiteSpace(_authToken))
+                throw new InvalidOperationException("Twilio Auth Token is not configured.");
+            
+            _fromNumber = configuration["Twilio:FromNumber"];
+            if (string.IsNullOrWhiteSpace(_fromNumber))
+                throw new InvalidOperationException("Twilio From Number is not configured.");
+            
+            TwilioClient.Init(_accountSid, _authToken);
+            _isInitialized = true;
+            
+            _logger.LogInformation("TwilioMessenger initialized successfully with From number: {FromNumber}", _fromNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize TwilioMessenger");
+            _isInitialized = false;
+            throw;
+        }
+    }
 
     public async Task SendMessageAsync(string to, string message)
     {
+        if (!_isInitialized)
+        {
+            throw new InvalidOperationException("TwilioMessenger is not properly initialized.");
+        }
+
         _logger.LogInformation("Sending WhatsApp message to {To}, length: {MessageLength}", to, message?.Length ?? 0);
         
         try
         {
-            if (configuration == null)
-                throw new InvalidOperationException("TwilioMessenger not initialized.");
-
-            var accountSid = configuration["Twilio:AccountSid"] ?? throw new InvalidOperationException("Twilio Account SID is not configured.");
-            var authToken = configuration["Twilio:AuthToken"] ?? throw new InvalidOperationException("Twilio Auth Token is not configured.");
-            var fromNumber = configuration["Twilio:FromNumber"] ?? throw new InvalidOperationException("Twilio From Number is not configured.");
-
-            _logger.LogDebug("Initializing Twilio client for message to {To} from {From}", to, fromNumber);
-            
-            TwilioClient.Init(accountSid, authToken);
-
             var messageResource = await MessageResource.CreateAsync(
                 body: message,
-                from: new PhoneNumber(fromNumber),
+                from: new PhoneNumber(_fromNumber),
                 to: new PhoneNumber(to)
             );
 

@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.11" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
@@ -23,9 +24,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\WhatsAppAIAssistantBot.Api\WhatsAppAIAssistantBot.Api.csproj" />
     <ProjectReference Include="..\WhatsAppAIAssistantBot.Application\WhatsAppAIAssistantBot.Application.csproj" />
     <ProjectReference Include="..\WhatsAppAIAssistantBot.Domain\WhatsAppAIAssistantBot.Domain.csproj" />
     <ProjectReference Include="..\WhatsAppAIAssistantBot.Infrastructure\WhatsAppAIAssistantBot.Infrastructure.csproj" />
+    <ProjectReference Include="..\WhatsAppAIAssistantBot.Models\WhatsAppAIAssistantBot.Models.csproj" />
   </ItemGroup>
 
 </Project>
