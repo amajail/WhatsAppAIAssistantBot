@@ -116,7 +116,7 @@ public class OrchestrationServiceTests
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(newUser);
 
-        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(message, "es"))
+        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(It.IsAny<ExtractionRequest>()))
             .ReturnsAsync(extractionResult);
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
@@ -164,7 +164,7 @@ public class OrchestrationServiceTests
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(unregisteredUser);
 
-        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(message, "es"))
+        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(It.IsAny<ExtractionRequest>()))
             .ReturnsAsync(extractionResult);
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
@@ -212,7 +212,7 @@ public class OrchestrationServiceTests
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(userWithName);
 
-        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(message, "es"))
+        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(It.IsAny<ExtractionRequest>()))
             .ReturnsAsync(extractionResult);
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(

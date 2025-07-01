@@ -16,6 +16,7 @@ public static class DependencyInjection
         // Register application/business logic services
         services.AddScoped<ISemanticKernelService, SemanticKernelService>();
         services.AddScoped<IAssistantService, AssistantOpenAIService>();
+        services.AddScoped<IChatCompletionService, ChatCompletionService>();
         services.AddScoped<IOrchestrationService, OrchestrationService>();
         services.AddScoped<IUserDataExtractionService, Services.UserDataExtractionService>();
         services.AddScoped<IUserContextService, Services.UserContextService>();

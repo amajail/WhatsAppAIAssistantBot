@@ -11,6 +11,7 @@ public class UserDataExtractionServiceTests
 {
     private readonly Mock<ILocalizationService> _mockLocalizationService;
     private readonly Mock<IAssistantService> _mockAssistantService;
+    private readonly Mock<IChatCompletionService> _mockChatCompletionService;
     private readonly Mock<ILogger<UserDataExtractionService>> _mockLogger;
     private readonly UserDataExtractionService _extractionService;
 
@@ -18,11 +19,13 @@ public class UserDataExtractionServiceTests
     {
         _mockLocalizationService = new Mock<ILocalizationService>();
         _mockAssistantService = new Mock<IAssistantService>();
+        _mockChatCompletionService = new Mock<IChatCompletionService>();
         _mockLogger = new Mock<ILogger<UserDataExtractionService>>();
         
         _extractionService = new UserDataExtractionService(
             _mockLocalizationService.Object,
             _mockAssistantService.Object,
+            _mockChatCompletionService.Object,
             _mockLogger.Object);
     }
 
@@ -39,7 +42,8 @@ public class UserDataExtractionServiceTests
             .ReturnsAsync(System.Text.Json.JsonSerializer.Serialize(patterns));
 
         // Act
-        var result = await _extractionService.ExtractNameAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractNameAsync(request);
 
         // Assert
         Assert.True(result.IsSuccessful);
@@ -61,7 +65,8 @@ public class UserDataExtractionServiceTests
             .ReturnsAsync(System.Text.Json.JsonSerializer.Serialize(patterns));
 
         // Act
-        var result = await _extractionService.ExtractNameAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractNameAsync(request);
 
         // Assert
         Assert.True(result.IsSuccessful);
@@ -83,7 +88,8 @@ public class UserDataExtractionServiceTests
             .ReturnsAsync(System.Text.Json.JsonSerializer.Serialize(patterns));
 
         // Act
-        var result = await _extractionService.ExtractEmailAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractEmailAsync(request);
 
         // Assert
         Assert.True(result.IsSuccessful);
@@ -105,7 +111,8 @@ public class UserDataExtractionServiceTests
             .ReturnsAsync(System.Text.Json.JsonSerializer.Serialize(patterns));
 
         // Act
-        var result = await _extractionService.ExtractEmailAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractEmailAsync(request);
 
         // Assert
         Assert.True(result.IsSuccessful);
@@ -121,7 +128,6 @@ public class UserDataExtractionServiceTests
         var message = "Hi there, I'm Sarah and I'd like to register";
         var languageCode = "en";
         var patterns = new[] { "name:", "my name is", "i am", "call me" };
-        var threadId = "temp_thread_123";
         var llmResponse = "Sarah";
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
@@ -132,14 +138,12 @@ public class UserDataExtractionServiceTests
             LocalizationKeys.LlmExtractNamePrompt, languageCode, message))
             .ReturnsAsync($"Extract only the person's name from the following message. If no name is found, respond 'NO_NAME_FOUND'. Message: {message}");
 
-        _mockAssistantService.Setup(x => x.CreateOrGetThreadAsync(It.IsAny<string>()))
-            .ReturnsAsync(threadId);
-
-        _mockAssistantService.Setup(x => x.GetAssistantReplyAsync(threadId, It.IsAny<string>()))
+        _mockChatCompletionService.Setup(x => x.GetCompletionAsync(It.IsAny<string>()))
             .ReturnsAsync(llmResponse);
 
         // Act
-        var result = await _extractionService.ExtractNameAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractNameAsync(request);
 
         // Assert
         Assert.True(result.IsSuccessful);
@@ -155,7 +159,6 @@ public class UserDataExtractionServiceTests
         var message = "You can reach out via sarah dot johnson at company dot org";
         var languageCode = "en";
         var patterns = new[] { "email:", "my email is", "contact me at" };
-        var threadId = "temp_thread_123";
         var llmResponse = "sarah.johnson@company.org";
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
@@ -166,14 +169,12 @@ public class UserDataExtractionServiceTests
             LocalizationKeys.LlmExtractEmailPrompt, languageCode, message))
             .ReturnsAsync($"Extract only the email address from the following message. If no email is found, respond 'NO_EMAIL_FOUND'. Message: {message}");
 
-        _mockAssistantService.Setup(x => x.CreateOrGetThreadAsync(It.IsAny<string>()))
-            .ReturnsAsync(threadId);
-
-        _mockAssistantService.Setup(x => x.GetAssistantReplyAsync(threadId, It.IsAny<string>()))
+        _mockChatCompletionService.Setup(x => x.GetCompletionAsync(It.IsAny<string>()))
             .ReturnsAsync(llmResponse);
 
         // Act
-        var result = await _extractionService.ExtractEmailAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractEmailAsync(request);
 
         // Assert
         Assert.True(result.IsSuccessful);
@@ -188,21 +189,18 @@ public class UserDataExtractionServiceTests
         // Arrange
         var message = "Hi, I'm John Smith and you can email me at john.smith@email.com";
         var languageCode = "en";
-        var threadId = "temp_thread_123";
         var llmResponse = "{\"name\": \"John Smith\", \"email\": \"john.smith@email.com\"}";
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
             LocalizationKeys.LlmExtractBothPrompt, languageCode, message))
             .ReturnsAsync($"Extract the name and email from the following message. Respond in JSON format: {{\"name\": \"name or null\", \"email\": \"email or null\"}}. Message: {message}");
 
-        _mockAssistantService.Setup(x => x.CreateOrGetThreadAsync(It.IsAny<string>()))
-            .ReturnsAsync(threadId);
-
-        _mockAssistantService.Setup(x => x.GetAssistantReplyAsync(threadId, It.IsAny<string>()))
+        _mockChatCompletionService.Setup(x => x.GetCompletionAsync(It.IsAny<string>()))
             .ReturnsAsync(llmResponse);
 
         // Act
-        var result = await _extractionService.ExtractUserDataAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractUserDataAsync(request);
 
         // Assert
         Assert.True(result.HasAnyData);
@@ -227,7 +225,8 @@ public class UserDataExtractionServiceTests
             .ReturnsAsync(System.Text.Json.JsonSerializer.Serialize(patterns));
 
         // Act
-        var result = await _extractionService.ExtractNameAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractNameAsync(request);
 
         // Assert
         Assert.False(result.IsSuccessful);
@@ -247,7 +246,8 @@ public class UserDataExtractionServiceTests
             .ReturnsAsync(System.Text.Json.JsonSerializer.Serialize(patterns));
 
         // Act
-        var result = await _extractionService.ExtractEmailAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractEmailAsync(request);
 
         // Assert
         Assert.False(result.IsSuccessful);
@@ -261,7 +261,6 @@ public class UserDataExtractionServiceTests
         var message = "Just some random text without a name";
         var languageCode = "en";
         var patterns = new[] { "name:", "my name is", "i am", "call me" };
-        var threadId = "temp_thread_123";
         var llmResponse = "NO_NAME_FOUND";
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
@@ -272,14 +271,12 @@ public class UserDataExtractionServiceTests
             LocalizationKeys.LlmExtractNamePrompt, languageCode, message))
             .ReturnsAsync($"Extract only the person's name from the following message. If no name is found, respond 'NO_NAME_FOUND'. Message: {message}");
 
-        _mockAssistantService.Setup(x => x.CreateOrGetThreadAsync(It.IsAny<string>()))
-            .ReturnsAsync(threadId);
-
-        _mockAssistantService.Setup(x => x.GetAssistantReplyAsync(threadId, It.IsAny<string>()))
+        _mockChatCompletionService.Setup(x => x.GetCompletionAsync(It.IsAny<string>()))
             .ReturnsAsync(llmResponse);
 
         // Act
-        var result = await _extractionService.ExtractNameAsync(message, languageCode);
+        var request = new ExtractionRequest { Message = message, LanguageCode = languageCode };
+        var result = await _extractionService.ExtractNameAsync(request);
 
         // Assert
         Assert.False(result.IsSuccessful);

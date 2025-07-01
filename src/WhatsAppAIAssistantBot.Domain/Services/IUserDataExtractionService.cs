@@ -2,9 +2,16 @@ namespace WhatsAppAIAssistantBot.Domain.Services;
 
 public interface IUserDataExtractionService
 {
-    Task<ExtractionResult> ExtractNameAsync(string message, string languageCode);
-    Task<ExtractionResult> ExtractEmailAsync(string message, string languageCode);
-    Task<UserDataExtractionResult> ExtractUserDataAsync(string message, string languageCode);
+    Task<ExtractionResult> ExtractNameAsync(ExtractionRequest request);
+    Task<ExtractionResult> ExtractEmailAsync(ExtractionRequest request);
+    Task<UserDataExtractionResult> ExtractUserDataAsync(ExtractionRequest request);
+}
+
+public class ExtractionRequest
+{
+    public string Message { get; set; } = string.Empty;
+    public string LanguageCode { get; set; } = string.Empty;
+    public string? ThreadId { get; set; }
 }
 
 public class ExtractionResult

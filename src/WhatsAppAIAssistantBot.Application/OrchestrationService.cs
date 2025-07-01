@@ -189,7 +189,13 @@ public class OrchestrationService(ISemanticKernelService sk,
         try
         {
             // Try to extract user data using the hybrid extraction service
-            var extractionResult = await _userDataExtractionService.ExtractUserDataAsync(message, user.LanguageCode);
+            var extractionRequest = new ExtractionRequest
+            {
+                Message = message,
+                LanguageCode = user.LanguageCode,
+                ThreadId = user.ThreadId
+            };
+            var extractionResult = await _userDataExtractionService.ExtractUserDataAsync(extractionRequest);
             
             _logger.LogDebug("Extraction completed - NameExtracted: {NameExtracted}, EmailExtracted: {EmailExtracted}", 
                 extractionResult.Name?.IsSuccessful == true, extractionResult.Email?.IsSuccessful == true);

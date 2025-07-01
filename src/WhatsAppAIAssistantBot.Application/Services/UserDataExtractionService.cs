@@ -9,24 +9,28 @@ public class UserDataExtractionService : IUserDataExtractionService
 {
     private readonly ILocalizationService _localizationService;
     private readonly IAssistantService _assistantService;
+    private readonly IChatCompletionService _chatCompletionService;
     private readonly ILogger<UserDataExtractionService> _logger;
 
     public UserDataExtractionService(
         ILocalizationService localizationService,
         IAssistantService assistantService,
+        IChatCompletionService chatCompletionService,
         ILogger<UserDataExtractionService> logger)
     {
         _localizationService = localizationService;
         _assistantService = assistantService;
+        _chatCompletionService = chatCompletionService;
         _logger = logger;
     }
 
-    public async Task<ExtractionResult> ExtractNameAsync(string message, string languageCode)
+    public async Task<ExtractionResult> ExtractNameAsync(ExtractionRequest request)
     {
-        _logger.LogInformation("Extracting name from message using language: {LanguageCode}", languageCode);
+        _logger.LogInformation("Extracting name from message using language: {LanguageCode}, threadId: {ThreadId}", 
+            request.LanguageCode, request.ThreadId);
 
         // First try pattern matching
-        var patternResult = await ExtractNameWithPatternsAsync(message, languageCode);
+        var patternResult = await ExtractNameWithPatternsAsync(request.Message, request.LanguageCode);
         if (patternResult.IsSuccessful)
         {
             _logger.LogInformation("Name extracted using pattern matching: {Name}", patternResult.ExtractedValue);
@@ -35,7 +39,7 @@ public class UserDataExtractionService : IUserDataExtractionService
 
         // Fallback to LLM
         _logger.LogInformation("Pattern matching failed, trying LLM fallback");
-        var llmResult = await ExtractNameWithLLMAsync(message, languageCode);
+        var llmResult = await ExtractNameWithLLMAsync(request);
         if (llmResult.IsSuccessful)
         {
             _logger.LogInformation("Name extracted using LLM: {Name}", llmResult.ExtractedValue);
@@ -48,12 +52,13 @@ public class UserDataExtractionService : IUserDataExtractionService
         return llmResult;
     }
 
-    public async Task<ExtractionResult> ExtractEmailAsync(string message, string languageCode)
+    public async Task<ExtractionResult> ExtractEmailAsync(ExtractionRequest request)
     {
-        _logger.LogInformation("Extracting email from message using language: {LanguageCode}", languageCode);
+        _logger.LogInformation("Extracting email from message using language: {LanguageCode}, threadId: {ThreadId}", 
+            request.LanguageCode, request.ThreadId);
 
         // First try pattern matching
-        var patternResult = await ExtractEmailWithPatternsAsync(message, languageCode);
+        var patternResult = await ExtractEmailWithPatternsAsync(request.Message, request.LanguageCode);
         if (patternResult.IsSuccessful)
         {
             _logger.LogInformation("Email extracted using pattern matching: {Email}", patternResult.ExtractedValue);
@@ -62,7 +67,7 @@ public class UserDataExtractionService : IUserDataExtractionService
 
         // Fallback to LLM
         _logger.LogInformation("Pattern matching failed, trying LLM fallback");
-        var llmResult = await ExtractEmailWithLLMAsync(message, languageCode);
+        var llmResult = await ExtractEmailWithLLMAsync(request);
         if (llmResult.IsSuccessful)
         {
             _logger.LogInformation("Email extracted using LLM: {Email}", llmResult.ExtractedValue);
@@ -75,17 +80,18 @@ public class UserDataExtractionService : IUserDataExtractionService
         return llmResult;
     }
 
-    public async Task<UserDataExtractionResult> ExtractUserDataAsync(string message, string languageCode)
+    public async Task<UserDataExtractionResult> ExtractUserDataAsync(ExtractionRequest request)
     {
-        _logger.LogInformation("Extracting user data from message using language: {LanguageCode}", languageCode);
+        _logger.LogInformation("Extracting user data from message using language: {LanguageCode}, threadId: {ThreadId}", 
+            request.LanguageCode, request.ThreadId);
 
         var result = new UserDataExtractionResult();
 
         // Try to extract both name and email in one go with LLM if the message seems to contain both
-        if (await MessageContainsBothDataAsync(message, languageCode))
+        if (await MessageContainsBothDataAsync(request.Message, request.LanguageCode))
         {
             _logger.LogInformation("Message appears to contain both name and email, trying combined LLM extraction");
-            var combinedResult = await ExtractBothWithLLMAsync(message, languageCode);
+            var combinedResult = await ExtractBothWithLLMAsync(request);
             if (combinedResult.Name?.IsSuccessful == true || combinedResult.Email?.IsSuccessful == true)
             {
                 return combinedResult;
@@ -93,8 +99,8 @@ public class UserDataExtractionService : IUserDataExtractionService
         }
 
         // Fall back to individual extraction
-        result.Name = await ExtractNameAsync(message, languageCode);
-        result.Email = await ExtractEmailAsync(message, languageCode);
+        result.Name = await ExtractNameAsync(request);
+        result.Email = await ExtractEmailAsync(request);
 
         return result;
     }
@@ -200,16 +206,36 @@ public class UserDataExtractionService : IUserDataExtractionService
         }
     }
 
-    private async Task<ExtractionResult> ExtractNameWithLLMAsync(string message, string languageCode)
+    private async Task<ExtractionResult> ExtractNameWithLLMAsync(ExtractionRequest request)
     {
         try
         {
             var prompt = await _localizationService.GetLocalizedMessageAsync(
-                LocalizationKeys.LlmExtractNamePrompt, languageCode, message);
+                LocalizationKeys.LlmExtractNamePrompt, request.LanguageCode, request.Message);
 
-            // Create a temporary thread for extraction (we could optimize this by reusing a single extraction thread)
-            var tempThreadId = await _assistantService.CreateOrGetThreadAsync($"temp_extraction_{Guid.NewGuid()}");
-            var response = await _assistantService.GetAssistantReplyAsync(tempThreadId, prompt);
+            string response;
+            
+            // TODO: REVIEW - Consider if using main thread for extraction is necessary or just use stateless completion
+            // First try: Use main thread if available
+            if (!string.IsNullOrEmpty(request.ThreadId))
+            {
+                _logger.LogDebug("Attempting name extraction using main thread: {ThreadId}", request.ThreadId);
+                try
+                {
+                    response = await _assistantService.GetAssistantReplyAsync(request.ThreadId, prompt);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Main thread extraction failed, falling back to stateless completion");
+                    response = await _chatCompletionService.GetCompletionAsync(prompt);
+                }
+            }
+            else
+            {
+                // No thread available, use stateless completion
+                _logger.LogDebug("No thread available, using stateless completion for name extraction");
+                response = await _chatCompletionService.GetCompletionAsync(prompt);
+            }
 
             if (response.Trim().Equals("NO_NAME_FOUND", StringComparison.OrdinalIgnoreCase))
             {
@@ -251,15 +277,35 @@ public class UserDataExtractionService : IUserDataExtractionService
         }
     }
 
-    private async Task<ExtractionResult> ExtractEmailWithLLMAsync(string message, string languageCode)
+    private async Task<ExtractionResult> ExtractEmailWithLLMAsync(ExtractionRequest request)
     {
         try
         {
             var prompt = await _localizationService.GetLocalizedMessageAsync(
-                LocalizationKeys.LlmExtractEmailPrompt, languageCode, message);
+                LocalizationKeys.LlmExtractEmailPrompt, request.LanguageCode, request.Message);
 
-            var tempThreadId = await _assistantService.CreateOrGetThreadAsync($"temp_extraction_{Guid.NewGuid()}");
-            var response = await _assistantService.GetAssistantReplyAsync(tempThreadId, prompt);
+            string response;
+            
+            // First try: Use main thread if available
+            if (!string.IsNullOrEmpty(request.ThreadId))
+            {
+                _logger.LogDebug("Attempting email extraction using main thread: {ThreadId}", request.ThreadId);
+                try
+                {
+                    response = await _assistantService.GetAssistantReplyAsync(request.ThreadId, prompt);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Main thread extraction failed, falling back to stateless completion");
+                    response = await _chatCompletionService.GetCompletionAsync(prompt);
+                }
+            }
+            else
+            {
+                // No thread available, use stateless completion
+                _logger.LogDebug("No thread available, using stateless completion for email extraction");
+                response = await _chatCompletionService.GetCompletionAsync(prompt);
+            }
 
             if (response.Trim().Equals("NO_EMAIL_FOUND", StringComparison.OrdinalIgnoreCase))
             {
@@ -301,15 +347,35 @@ public class UserDataExtractionService : IUserDataExtractionService
         }
     }
 
-    private async Task<UserDataExtractionResult> ExtractBothWithLLMAsync(string message, string languageCode)
+    private async Task<UserDataExtractionResult> ExtractBothWithLLMAsync(ExtractionRequest request)
     {
         try
         {
             var prompt = await _localizationService.GetLocalizedMessageAsync(
-                LocalizationKeys.LlmExtractBothPrompt, languageCode, message);
+                LocalizationKeys.LlmExtractBothPrompt, request.LanguageCode, request.Message);
 
-            var tempThreadId = await _assistantService.CreateOrGetThreadAsync($"temp_extraction_{Guid.NewGuid()}");
-            var response = await _assistantService.GetAssistantReplyAsync(tempThreadId, prompt);
+            string response;
+            
+            // First try: Use main thread if available
+            if (!string.IsNullOrEmpty(request.ThreadId))
+            {
+                _logger.LogDebug("Attempting combined extraction using main thread: {ThreadId}", request.ThreadId);
+                try
+                {
+                    response = await _assistantService.GetAssistantReplyAsync(request.ThreadId, prompt);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Main thread extraction failed, falling back to stateless completion");
+                    response = await _chatCompletionService.GetCompletionAsync(prompt);
+                }
+            }
+            else
+            {
+                // No thread available, use stateless completion
+                _logger.LogDebug("No thread available, using stateless completion for combined extraction");
+                response = await _chatCompletionService.GetCompletionAsync(prompt);
+            }
 
             var jsonResponse = JsonSerializer.Deserialize<JsonElement>(response.Trim());
             
