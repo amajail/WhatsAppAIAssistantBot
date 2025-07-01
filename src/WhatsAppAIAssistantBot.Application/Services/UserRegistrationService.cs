@@ -155,9 +155,9 @@ public class UserRegistrationService : IUserRegistrationService
             _logger.LogInformation("Completing registration with email '{Email}' for user {UserId} (Name: '{Name}')", 
                 extractedEmail, user.PhoneNumber, user.Name);
             
-            await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, user.Name, extractedEmail);
+            await _userStorageService.UpdateUserRegistrationAsync(user.PhoneNumber, user.Name ?? "Unknown", extractedEmail);
             var completionMessage = await _localizationService.GetLocalizedMessageAsync(
-                LocalizationKeys.RegistrationComplete, user.LanguageCode, user.Name);
+                LocalizationKeys.RegistrationComplete, user.LanguageCode, user.Name ?? "User");
 
             return new RegistrationResult
             {

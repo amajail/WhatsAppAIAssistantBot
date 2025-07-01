@@ -47,6 +47,13 @@ public class OrchestrationService(ISemanticKernelService sk,
 
         try
         {
+            // Validate message input
+            if (string.IsNullOrEmpty(message))
+            {
+                _logger.LogWarning("Empty or null message received for user {UserId}", userId);
+                return;
+            }
+
             // Initialize user and thread
             var (user, threadId) = await GetOrCreateUserAsync(userId);
 
@@ -54,7 +61,7 @@ public class OrchestrationService(ISemanticKernelService sk,
                 user.IsRegistered, user.LanguageCode, threadId);
 
             // Try to handle as command first
-            if (await HandleCommandAsync(user, message))
+            if (!string.IsNullOrEmpty(message) && await HandleCommandAsync(user, message))
             {
                 _logger.LogInformation("Message processed as command for user {UserId}", userId);
                 return;
@@ -177,7 +184,7 @@ public class OrchestrationService(ISemanticKernelService sk,
             _logger.LogInformation("Generated reply for user {UserId}, length: {ReplyLength}", 
                 user.PhoneNumber, reply?.Length ?? 0);
             
-            await _twilioMessenger.SendMessageAsync(user.PhoneNumber, reply);
+            await _twilioMessenger.SendMessageAsync(user.PhoneNumber, reply ?? "Sorry, I couldn't generate a response.");
             
             _logger.LogDebug("Conversation handling completed for user {UserId}", user.PhoneNumber);
         }

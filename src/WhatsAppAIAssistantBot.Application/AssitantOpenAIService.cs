@@ -169,7 +169,7 @@ public class AssistantOpenAIService : IAssistantService
                         var reply = textContent.Text;
                         _logger.LogInformation("Retrieved assistant reply for thread {ThreadId}, reply length: {ReplyLength}", 
                             threadId, reply?.Length ?? 0);
-                        return reply;
+                        return reply ?? "No text content found in response.";
                     }
                 }
 #pragma warning restore OPENAI001

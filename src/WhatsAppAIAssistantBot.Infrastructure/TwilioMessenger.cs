@@ -20,15 +20,15 @@ public class TwilioMessenger : ITwilioMessenger
         
         try
         {
-            _accountSid = configuration["Twilio:AccountSid"];
+            _accountSid = configuration["Twilio:AccountSid"] ?? throw new InvalidOperationException("Twilio Account SID is not configured.");
             if (string.IsNullOrWhiteSpace(_accountSid))
                 throw new InvalidOperationException("Twilio Account SID is not configured.");
             
-            _authToken = configuration["Twilio:AuthToken"];
+            _authToken = configuration["Twilio:AuthToken"] ?? throw new InvalidOperationException("Twilio Auth Token is not configured.");
             if (string.IsNullOrWhiteSpace(_authToken))
                 throw new InvalidOperationException("Twilio Auth Token is not configured.");
             
-            _fromNumber = configuration["Twilio:FromNumber"];
+            _fromNumber = configuration["Twilio:FromNumber"] ?? throw new InvalidOperationException("Twilio From Number is not configured.");
             if (string.IsNullOrWhiteSpace(_fromNumber))
                 throw new InvalidOperationException("Twilio From Number is not configured.");
             
