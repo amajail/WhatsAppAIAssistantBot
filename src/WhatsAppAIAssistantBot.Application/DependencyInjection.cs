@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IOrchestrationService, OrchestrationService>();
         services.AddScoped<IUserDataExtractionService, Services.UserDataExtractionService>();
         services.AddScoped<IUserContextService, Services.UserContextService>();
+        services.AddScoped<IUserRegistrationService, Services.UserRegistrationService>();
 
         return services;
     }

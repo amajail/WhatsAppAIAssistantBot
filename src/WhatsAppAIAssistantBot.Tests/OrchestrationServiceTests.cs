@@ -17,6 +17,7 @@ public class OrchestrationServiceTests
     private readonly Mock<ILocalizationService> _mockLocalizationService;
     private readonly Mock<IUserDataExtractionService> _mockUserDataExtractionService;
     private readonly Mock<IUserContextService> _mockUserContextService;
+    private readonly Mock<IUserRegistrationService> _mockUserRegistrationService;
     private readonly Mock<ILogger<OrchestrationService>> _mockLogger;
     private readonly OrchestrationService _orchestrationService;
 
@@ -29,6 +30,7 @@ public class OrchestrationServiceTests
         _mockLocalizationService = new Mock<ILocalizationService>();
         _mockUserDataExtractionService = new Mock<IUserDataExtractionService>();
         _mockUserContextService = new Mock<IUserContextService>();
+        _mockUserRegistrationService = new Mock<IUserRegistrationService>();
         _mockLogger = new Mock<ILogger<OrchestrationService>>();
         
         _orchestrationService = new OrchestrationService(
@@ -39,6 +41,7 @@ public class OrchestrationServiceTests
             _mockLocalizationService.Object,
             _mockUserDataExtractionService.Object,
             _mockUserContextService.Object,
+            _mockUserRegistrationService.Object,
             _mockLogger.Object
         );
     }
@@ -116,12 +119,14 @@ public class OrchestrationServiceTests
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(newUser);
 
-        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(It.IsAny<ExtractionRequest>()))
-            .ReturnsAsync(extractionResult);
-
-        _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
-            LocalizationKeys.WelcomeMessage, "es"))
-            .ReturnsAsync("¡Bienvenido! Por favor dime tu nombre");
+        _mockUserRegistrationService.Setup(x => x.ProcessRegistrationAsync(It.IsAny<User>(), It.IsAny<string>()))
+            .ReturnsAsync(new RegistrationResult 
+            { 
+                IsCompleted = false, 
+                RequiresResponse = true, 
+                ResponseMessage = "¡Bienvenido! Por favor dime tu nombre",
+                Action = RegistrationAction.RequestName
+            });
 
         // Act
         await _orchestrationService.HandleMessageAsync(userId, message);
@@ -164,8 +169,14 @@ public class OrchestrationServiceTests
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(unregisteredUser);
 
-        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(It.IsAny<ExtractionRequest>()))
-            .ReturnsAsync(extractionResult);
+        _mockUserRegistrationService.Setup(x => x.ProcessRegistrationAsync(It.IsAny<User>(), It.IsAny<string>()))
+            .ReturnsAsync(new RegistrationResult 
+            { 
+                IsCompleted = true, 
+                RequiresResponse = true, 
+                ResponseMessage = "Registration completed!",
+                Action = RegistrationAction.CompleteRegistration
+            });
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
             LocalizationKeys.GreetWithName, "es", "John Doe"))
@@ -175,9 +186,9 @@ public class OrchestrationServiceTests
         await _orchestrationService.HandleMessageAsync(userId, message);
 
         // Assert
-        _mockUserStorageService.Verify(x => x.UpdateUserRegistrationAsync(userId, "John Doe", string.Empty), Times.Once);
+        _mockUserRegistrationService.Verify(x => x.ProcessRegistrationAsync(It.IsAny<User>(), message), Times.Once);
         _mockTwilioMessenger.Verify(x => x.SendMessageAsync(userId, 
-            "¡Hola John Doe! Por favor proporciona tu correo electrónico"), Times.Once);
+            "Registration completed!"), Times.Once);
     }
 
     [Fact]
@@ -212,8 +223,14 @@ public class OrchestrationServiceTests
         _mockUserStorageService.Setup(x => x.GetUserByPhoneNumberAsync(userId))
             .ReturnsAsync(userWithName);
 
-        _mockUserDataExtractionService.Setup(x => x.ExtractUserDataAsync(It.IsAny<ExtractionRequest>()))
-            .ReturnsAsync(extractionResult);
+        _mockUserRegistrationService.Setup(x => x.ProcessRegistrationAsync(It.IsAny<User>(), It.IsAny<string>()))
+            .ReturnsAsync(new RegistrationResult 
+            { 
+                IsCompleted = true, 
+                RequiresResponse = true, 
+                ResponseMessage = "Registration completed!",
+                Action = RegistrationAction.CompleteRegistration
+            });
 
         _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
             LocalizationKeys.RegistrationComplete, "es", "John Doe"))
@@ -223,8 +240,8 @@ public class OrchestrationServiceTests
         await _orchestrationService.HandleMessageAsync(userId, message);
 
         // Assert
-        _mockUserStorageService.Verify(x => x.UpdateUserRegistrationAsync(userId, "John Doe", "john@example.com"), Times.Once);
+        _mockUserRegistrationService.Verify(x => x.ProcessRegistrationAsync(It.IsAny<User>(), message), Times.Once);
         _mockTwilioMessenger.Verify(x => x.SendMessageAsync(userId, 
-            "¡Gracias John Doe! Tu registro está completo. ¿Cómo puedo ayudarte hoy?"), Times.Once);
+            "Registration completed!"), Times.Once);
     }
 }
