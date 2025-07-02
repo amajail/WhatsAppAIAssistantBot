@@ -71,13 +71,13 @@ public class CommandHandlerServiceTests
     [InlineData("/idioma")]
     [InlineData("/lang ")]
     [InlineData("/idioma ")]
-    public async Task HandleCommandAsync_WithIncompleteLanguageCommand_ShouldReturnTrue(string command)
+    public async Task HandleCommandAsync_WithIncompleteLanguageCommand_ShouldReturnFalse(string command)
     {
         // Act
         var result = await _commandHandlerService.HandleCommandAsync(_testUser, command);
 
         // Assert
-        Assert.True(result);
+        Assert.False(result);
         _mockUserStorageService.Verify(x => x.CreateOrUpdateUserAsync(It.IsAny<User>()), Times.Never);
         _mockTwilioMessenger.Verify(x => x.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
