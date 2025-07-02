@@ -3,6 +3,7 @@ using WhatsAppAIAssistantBot.Infrastructure;
 using WhatsAppAIAssistantBot.Domain.Services;
 using WhatsAppAIAssistantBot.Domain.Entities;
 using WhatsAppAIAssistantBot.Domain.Models;
+using WhatsAppAIAssistantBot.Application.Services;
 
 namespace WhatsAppAIAssistantBot.Application;
 
@@ -15,20 +16,20 @@ public class OrchestrationService(ISemanticKernelService sk,
                                   IAssistantService assistant,
                                   ITwilioMessenger twilioMessenger,
                                   IUserStorageService userStorageService,
-                                  ILocalizationService localizationService,
                                   IUserDataExtractionService userDataExtractionService,
                                   IUserContextService userContextService,
                                   IUserRegistrationService userRegistrationService,
+                                  ICommandHandlerService commandHandlerService,
                                   ILogger<OrchestrationService> logger) : IOrchestrationService
 {
     private readonly ISemanticKernelService _sk = sk;
     private readonly IAssistantService _assistant = assistant;
     private readonly ITwilioMessenger _twilioMessenger = twilioMessenger;
     private readonly IUserStorageService _userStorageService = userStorageService;
-    private readonly ILocalizationService _localizationService = localizationService;
     private readonly IUserDataExtractionService _userDataExtractionService = userDataExtractionService;
     private readonly IUserContextService _userContextService = userContextService;
     private readonly IUserRegistrationService _userRegistrationService = userRegistrationService;
+    private readonly ICommandHandlerService _commandHandlerService = commandHandlerService;
     private readonly ILogger<OrchestrationService> _logger = logger;
 
     public async Task HandleMessageAsync(string userId, string message)
@@ -61,7 +62,7 @@ public class OrchestrationService(ISemanticKernelService sk,
                 user.IsRegistered, user.LanguageCode, threadId);
 
             // Try to handle as command first
-            if (!string.IsNullOrEmpty(message) && await HandleCommandAsync(user, message))
+            if (!string.IsNullOrEmpty(message) && await _commandHandlerService.HandleCommandAsync(user, message))
             {
                 _logger.LogInformation("Message processed as command for user {UserId}", userId);
                 return;
@@ -134,26 +135,6 @@ public class OrchestrationService(ISemanticKernelService sk,
         }
     }
 
-    private async Task<bool> HandleCommandAsync(User user, string message)
-    {
-        _logger.LogDebug("Checking for commands in message for user {UserId}", user.PhoneNumber);
-        
-        // Handle language switching commands
-        if (await HandleLanguageCommandAsync(user, message))
-        {
-            _logger.LogInformation("Processed language command for user {UserId}", user.PhoneNumber);
-            return true;
-        }
-
-        // Handle help commands
-        if (await HandleHelpCommandAsync(user, message))
-        {
-            _logger.LogInformation("Processed help command for user {UserId}", user.PhoneNumber);
-            return true;
-        }
-
-        return false;
-    }
 
     private async Task HandleConversationAsync(User user, string threadId, string message)
     {
@@ -197,53 +178,4 @@ public class OrchestrationService(ISemanticKernelService sk,
     }
 
 
-    private async Task<bool> HandleLanguageCommandAsync(User user, string message)
-    {
-        var lowerMessage = message.ToLower().Trim();
-        
-        // Handle language switching commands
-        if (lowerMessage.StartsWith("/lang ") || lowerMessage.StartsWith("/idioma "))
-        {
-            var parts = lowerMessage.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= 2)
-            {
-                var requestedLanguage = parts[1];
-                var supportedLanguage = SupportedLanguageExtensions.FromCode(requestedLanguage);
-                
-                if (await _localizationService.IsLanguageSupportedAsync(supportedLanguage.ToCode()))
-                {
-                    user.LanguageCode = supportedLanguage.ToCode();
-                    await _userStorageService.CreateOrUpdateUserAsync(user);
-                    
-                    var successMessage = await _localizationService.GetLocalizedMessageAsync(
-                        LocalizationKeys.LanguageChanged, user.LanguageCode, supportedLanguage.ToDisplayName());
-                    await _twilioMessenger.SendMessageAsync(user.PhoneNumber, successMessage);
-                }
-                else
-                {
-                    var errorMessage = await _localizationService.GetLocalizedMessageAsync(
-                        LocalizationKeys.LanguageNotSupported, user.LanguageCode);
-                    await _twilioMessenger.SendMessageAsync(user.PhoneNumber, errorMessage);
-                }
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    private async Task<bool> HandleHelpCommandAsync(User user, string message)
-    {
-        var lowerMessage = message.ToLower().Trim();
-        
-        if (lowerMessage == "/help" || lowerMessage == "/ayuda")
-        {
-            var helpMessage = await _localizationService.GetLocalizedMessageAsync(
-                LocalizationKeys.HelpMessage, user.LanguageCode);
-            await _twilioMessenger.SendMessageAsync(user.PhoneNumber, helpMessage);
-            return true;
-        }
-        
-        return false;
-    }
 }

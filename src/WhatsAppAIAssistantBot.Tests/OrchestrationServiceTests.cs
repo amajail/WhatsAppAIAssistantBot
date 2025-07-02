@@ -3,6 +3,7 @@ using WhatsAppAIAssistantBot.Application;
 using WhatsAppAIAssistantBot.Infrastructure;
 using WhatsAppAIAssistantBot.Domain.Services;
 using WhatsAppAIAssistantBot.Domain.Entities;
+using WhatsAppAIAssistantBot.Application.Services;
 using Moq;
 using Xunit;
 
@@ -14,10 +15,10 @@ public class OrchestrationServiceTests
     private readonly Mock<IAssistantService> _mockAssistant;
     private readonly Mock<ITwilioMessenger> _mockTwilioMessenger;
     private readonly Mock<IUserStorageService> _mockUserStorageService;
-    private readonly Mock<ILocalizationService> _mockLocalizationService;
     private readonly Mock<IUserDataExtractionService> _mockUserDataExtractionService;
     private readonly Mock<IUserContextService> _mockUserContextService;
     private readonly Mock<IUserRegistrationService> _mockUserRegistrationService;
+    private readonly Mock<ICommandHandlerService> _mockCommandHandlerService;
     private readonly Mock<ILogger<OrchestrationService>> _mockLogger;
     private readonly OrchestrationService _orchestrationService;
 
@@ -27,10 +28,10 @@ public class OrchestrationServiceTests
         _mockAssistant = new Mock<IAssistantService>();
         _mockTwilioMessenger = new Mock<ITwilioMessenger>();
         _mockUserStorageService = new Mock<IUserStorageService>();
-        _mockLocalizationService = new Mock<ILocalizationService>();
         _mockUserDataExtractionService = new Mock<IUserDataExtractionService>();
         _mockUserContextService = new Mock<IUserContextService>();
         _mockUserRegistrationService = new Mock<IUserRegistrationService>();
+        _mockCommandHandlerService = new Mock<ICommandHandlerService>();
         _mockLogger = new Mock<ILogger<OrchestrationService>>();
         
         _orchestrationService = new OrchestrationService(
@@ -38,10 +39,10 @@ public class OrchestrationServiceTests
             _mockAssistant.Object,
             _mockTwilioMessenger.Object,
             _mockUserStorageService.Object,
-            _mockLocalizationService.Object,
             _mockUserDataExtractionService.Object,
             _mockUserContextService.Object,
             _mockUserRegistrationService.Object,
+            _mockCommandHandlerService.Object,
             _mockLogger.Object
         );
     }
@@ -178,9 +179,6 @@ public class OrchestrationServiceTests
                 Action = RegistrationAction.CompleteRegistration
             });
 
-        _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
-            LocalizationKeys.GreetWithName, "es", "John Doe"))
-            .ReturnsAsync("¡Hola John Doe! Por favor proporciona tu correo electrónico");
 
         // Act
         await _orchestrationService.HandleMessageAsync(userId, message);
@@ -232,9 +230,6 @@ public class OrchestrationServiceTests
                 Action = RegistrationAction.CompleteRegistration
             });
 
-        _mockLocalizationService.Setup(x => x.GetLocalizedMessageAsync(
-            LocalizationKeys.RegistrationComplete, "es", "John Doe"))
-            .ReturnsAsync("¡Gracias John Doe! Tu registro está completo. ¿Cómo puedo ayudarte hoy?");
 
         // Act
         await _orchestrationService.HandleMessageAsync(userId, message);
