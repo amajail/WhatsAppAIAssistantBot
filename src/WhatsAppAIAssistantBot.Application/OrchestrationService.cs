@@ -7,11 +7,36 @@ using WhatsAppAIAssistantBot.Application.Services;
 
 namespace WhatsAppAIAssistantBot.Application;
 
+/// <summary>
+/// Orchestrates the processing of incoming WhatsApp messages, coordinating user registration,
+/// command processing, and AI-powered conversations through various specialized services.
+/// </summary>
 public interface IOrchestrationService
 {
+    /// <summary>
+    /// Processes an incoming message from a user, handling the complete workflow from
+    /// user initialization through message processing and response generation.
+    /// </summary>
+    /// <param name="userId">The user's phone number identifier (e.g., "whatsapp:+1234567890")</param>
+    /// <param name="message">The incoming message content from the user</param>
+    /// <returns>A task representing the asynchronous message processing operation</returns>
+    /// <exception cref="ArgumentException">Thrown when userId or message parameters are invalid</exception>
+    /// <exception cref="InvalidOperationException">Thrown when message processing fails due to system state</exception>
     Task HandleMessageAsync(string userId, string message);
 }
 
+/// <summary>
+/// Main orchestration service that coordinates the processing of WhatsApp messages.
+/// This service implements the primary business workflow: user initialization, command handling,
+/// user registration management, and AI-powered conversation processing.
+/// </summary>
+/// <remarks>
+/// The orchestration follows this flow:
+/// 1. Validate and initialize user context
+/// 2. Check for and process commands (language switching, help)
+/// 3. Handle user registration flow for unregistered users
+/// 4. Process conversations through AI assistant for registered users
+/// </remarks>
 public class OrchestrationService(ISemanticKernelService sk,
                                   IAssistantService assistant,
                                   ITwilioMessenger twilioMessenger,
@@ -97,6 +122,13 @@ public class OrchestrationService(ISemanticKernelService sk,
         }
     }
 
+    /// <summary>
+    /// Initializes user context by creating or retrieving an existing user and their OpenAI thread.
+    /// This method ensures both the user record and OpenAI thread exist for message processing.
+    /// </summary>
+    /// <param name="userId">The user's phone number identifier</param>
+    /// <returns>A tuple containing the user entity and their OpenAI thread ID</returns>
+    /// <exception cref="InvalidOperationException">Thrown when user or thread creation fails</exception>
     private async Task<(User user, string threadId)> GetOrCreateUserAsync(string userId)
     {
         _logger.LogDebug("Initializing user and thread for {UserId}", userId);
@@ -136,6 +168,15 @@ public class OrchestrationService(ISemanticKernelService sk,
     }
 
 
+    /// <summary>
+    /// Processes a conversation message for a registered user through the AI assistant.
+    /// Determines whether to include user context based on message content and generates an appropriate response.
+    /// </summary>
+    /// <param name="user">The registered user entity</param>
+    /// <param name="threadId">The OpenAI thread ID for conversation continuity</param>
+    /// <param name="message">The user's message content</param>
+    /// <returns>A task representing the asynchronous conversation processing</returns>
+    /// <exception cref="InvalidOperationException">Thrown when AI assistant interaction fails</exception>
     private async Task HandleConversationAsync(User user, string threadId, string message)
     {
         _logger.LogDebug("Starting conversation handling for user {UserId} with thread {ThreadId}", 

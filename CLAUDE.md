@@ -18,19 +18,35 @@ The solution follows Clean Architecture principles with these layers:
 
 ### Key Components
 
-- **OrchestrationService** (`src/WhatsAppAIAssistantBot.Application/OrchestrationService.cs:10`): Main business logic that handles incoming messages and coordinates AI responses
-- **WhatsAppController** (`src/WhatsAppAIAssistantBot.Api/Controllers/WhatsAppController.cs:9`): Receives Twilio webhook calls at `/api/whatsapp`
-- **HealthController** (`src/WhatsAppAIAssistantBot.Api/Controllers/HealthController.cs:6`): Health check endpoints at `/api/health` and `/api/health/ready`
-- **AssistantOpenAIService**: Manages OpenAI Assistant API interactions with thread management
-- **TwilioMessenger**: Handles outbound WhatsApp message sending via Twilio
+- **OrchestrationService** (`src/WhatsAppAIAssistantBot.Application/OrchestrationService.cs:15`): Main business logic that handles incoming messages and coordinates AI responses
+- **WhatsAppController** (`src/WhatsAppAIAssistantBot.Api/Controllers/WhatsAppController.cs:12`): Receives Twilio webhook calls at `/api/whatsapp`
+- **HealthController** (`src/WhatsAppAIAssistantBot.Api/Controllers/HealthController.cs:7`): Health check endpoints at `/api/health` and `/api/health/ready`
+- **CommandHandlerService** (`src/WhatsAppAIAssistantBot.Application/Services/CommandHandlerService.cs:25`): Handles bot commands like language switching (/lang, /idioma) and help (/help, /ayuda)
+- **AssistantOpenAIService** (`src/WhatsAppAIAssistantBot.Application/AssitantOpenAIService.cs:30`): Manages OpenAI Assistant API interactions with thread management
+- **UserRegistrationService** (`src/WhatsAppAIAssistantBot.Application/Services/UserRegistrationService.cs:17`): Manages progressive user registration flow (name and email collection)
+- **UserDataExtractionService** (`src/WhatsAppAIAssistantBot.Application/Services/UserDataExtractionService.cs`): Extracts user data using pattern matching and LLM fallback
+- **UserContextService** (`src/WhatsAppAIAssistantBot.Application/Services/UserContextService.cs`): Provides context-aware message formatting for improved AI responses
+- **TwilioMessenger** (`src/WhatsAppAIAssistantBot.Infrastructure/TwilioMessenger.cs:18`): Handles outbound WhatsApp message sending via Twilio
+- **LocalizationService** (`src/WhatsAppAIAssistantBot.Infrastructure/Services/LocalizationService.cs`): Provides multi-language support (English/Spanish)
 - **SemanticKernelService**: Provides local AI skills (currently has TimeSkill)
 
-### Message Flow
+### Enhanced Message Flow
 
-1. Twilio sends webhook to `/api/whatsapp` endpoint
-2. WhatsAppController receives TwilioWebhookModel and calls OrchestrationService
-3. OrchestrationService creates/retrieves OpenAI thread for user and gets AI response
-4. Response is sent back to user via TwilioMessenger
+1. **Webhook Reception**: Twilio sends webhook to `/api/whatsapp` endpoint
+2. **Request Processing**: WhatsAppController receives TwilioWebhookModel and calls OrchestrationService
+3. **User Initialization**: OrchestrationService creates/retrieves user and OpenAI thread
+4. **Command Processing**: CommandHandlerService checks for bot commands (/lang, /help, etc.)
+5. **Registration Flow**: For unregistered users, UserRegistrationService manages name/email collection
+6. **Conversation Handling**: For registered users, context-aware AI responses via AssistantOpenAIService
+7. **Response Delivery**: Final response sent via TwilioMessenger with localization support
+
+### User Registration Process
+
+1. **Welcome**: New users receive welcome message in default language (Spanish)
+2. **Name Collection**: Bot requests name using natural language patterns
+3. **Email Collection**: After name confirmation, bot requests email address
+4. **Validation**: Email format validation and data persistence
+5. **Completion**: Registration completion triggers full conversation access
 
 ## Development Commands
 
@@ -96,10 +112,11 @@ Current deployment:
 
 ## Testing
 
-The solution includes a comprehensive test suite:
+The solution includes a comprehensive test suite with 90 unit tests:
 - **WhatsAppAIAssistantBot.Tests**: xUnit test project with Moq for mocking
-- Tests cover OrchestrationService business logic
-- GitHub Actions pipeline runs tests automatically on build
+- **Test Coverage**: OrchestrationService, CommandHandlerService, UserRegistrationService, TwilioMessenger, and more
+- **Test Categories**: Business logic, command processing, user registration flow, messaging, and data extraction
+- **GitHub Actions**: Automated testing pipeline runs tests on every build
 
 ```bash
 # Run all tests
@@ -107,7 +124,12 @@ dotnet test
 
 # Run tests with verbose output
 dotnet test --verbosity normal
+
+# Run specific test class
+dotnet test --filter "ClassName=CommandHandlerServiceTests"
 ```
+
+**Current Test Statistics**: 90 tests, 0 failures, comprehensive coverage of core functionality.
 
 ## Dependencies
 
@@ -118,6 +140,20 @@ Key NuGet packages:
 - Swashbuckle.AspNetCore (8.1.4)
 
 The API includes Swagger UI available at `/swagger` in development mode.
+
+## Documentation
+
+The project includes comprehensive XML documentation:
+- **XML Documentation**: Complete API documentation with IntelliSense support
+- **Generated Files**: XML documentation files auto-generated during build
+- **Coverage**: All public interfaces, classes, methods, and properties documented
+- **Standards**: Industry-standard XML documentation tags (`<summary>`, `<param>`, `<returns>`, `<exception>`)
+
+### Documentation Files Generated
+- `WhatsAppAIAssistantBot.Api.xml`: API controllers and endpoints
+- `WhatsAppAIAssistantBot.Application.xml`: Business logic and services
+- `WhatsAppAIAssistantBot.Domain.xml`: Domain entities and interfaces
+- `WhatsAppAIAssistantBot.Infrastructure.xml`: External integrations and data access
 
 ## Database
 

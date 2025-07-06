@@ -5,6 +5,22 @@ using WhatsAppAIAssistantBot.Infrastructure;
 
 namespace WhatsAppAIAssistantBot.Application.Services;
 
+/// <summary>
+/// Service responsible for managing the user registration process.
+/// Handles the progressive collection of user information (name and email) through
+/// natural language processing and validates the extracted data.
+/// </summary>
+/// <remarks>
+/// The registration process follows these steps:
+/// 1. Welcome new users and request their name
+/// 2. Extract and validate the provided name
+/// 3. Request email address after name confirmation
+/// 4. Extract and validate the provided email
+/// 5. Complete registration when both name and email are collected
+/// 
+/// The service uses intelligent data extraction to parse user responses naturally,
+/// supporting multiple input formats and languages.
+/// </remarks>
 public class UserRegistrationService : IUserRegistrationService
 {
     private readonly IUserDataExtractionService _userDataExtractionService;
@@ -13,6 +29,14 @@ public class UserRegistrationService : IUserRegistrationService
     private readonly ITwilioMessenger _twilioMessenger;
     private readonly ILogger<UserRegistrationService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the UserRegistrationService.
+    /// </summary>
+    /// <param name="userDataExtractionService">Service for extracting user data from messages</param>
+    /// <param name="userStorageService">Service for persisting user data</param>
+    /// <param name="localizationService">Service for retrieving localized messages</param>
+    /// <param name="twilioMessenger">Service for sending WhatsApp messages</param>
+    /// <param name="logger">Logger instance for this service</param>
     public UserRegistrationService(
         IUserDataExtractionService userDataExtractionService,
         IUserStorageService userStorageService,
@@ -43,6 +67,16 @@ public class UserRegistrationService : IUserRegistrationService
         return UserRegistrationState.Complete;
     }
 
+    /// <summary>
+    /// Processes a user message during the registration flow to extract and validate user information.
+    /// Handles progressive data collection (name, then email) and provides appropriate responses
+    /// based on the current registration state and extracted data.
+    /// </summary>
+    /// <param name="user">The user entity in the registration process</param>
+    /// <param name="message">The user's message containing potential registration data</param>
+    /// <returns>A RegistrationResult indicating the outcome and any required response</returns>
+    /// <exception cref="ArgumentNullException">Thrown when user or message is null</exception>
+    /// <exception cref="InvalidOperationException">Thrown when registration processing fails</exception>
     public async Task<RegistrationResult> ProcessRegistrationAsync(User user, string message)
     {
         _logger.LogInformation("Starting registration process for user {UserId} - HasName: {HasName}, HasEmail: {HasEmail}", 

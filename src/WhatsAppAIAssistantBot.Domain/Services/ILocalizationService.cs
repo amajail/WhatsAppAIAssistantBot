@@ -2,15 +2,56 @@ using WhatsAppAIAssistantBot.Domain.Models;
 
 namespace WhatsAppAIAssistantBot.Domain.Services;
 
+/// <summary>
+/// Service contract for managing localized messages and text resources.
+/// Provides methods for retrieving localized content based on language preferences
+/// and managing language support validation.
+/// </summary>
 public interface ILocalizationService
 {
+    /// <summary>
+    /// Retrieves a localized message by key for the specified language with optional parameters.
+    /// </summary>
+    /// <param name="key">The localization key to retrieve</param>
+    /// <param name="language">The target language for localization</param>
+    /// <param name="parameters">Optional parameters for string formatting</param>
+    /// <returns>The localized message with parameters applied</returns>
     Task<string> GetLocalizedMessageAsync(string key, SupportedLanguage language, params object[] parameters);
+    /// <summary>
+    /// Retrieves a localized message by key for the specified language code with optional parameters.
+    /// </summary>
+    /// <param name="key">The localization key to retrieve</param>
+    /// <param name="languageCode">The language code (e.g., "en", "es")</param>
+    /// <param name="parameters">Optional parameters for string formatting</param>
+    /// <returns>The localized message with parameters applied</returns>
     Task<string> GetLocalizedMessageAsync(string key, string languageCode, params object[] parameters);
+    /// <summary>
+    /// Gets the default language for the application.
+    /// </summary>
+    /// <returns>The default supported language</returns>
     Task<SupportedLanguage> GetDefaultLanguageAsync();
+    /// <summary>
+    /// Determines whether a language code is supported by the localization system.
+    /// </summary>
+    /// <param name="languageCode">The language code to validate</param>
+    /// <returns>True if the language is supported, false otherwise</returns>
     Task<bool> IsLanguageSupportedAsync(string languageCode);
+    /// <summary>
+    /// Retrieves all localized messages for a specific language.
+    /// </summary>
+    /// <param name="language">The target language</param>
+    /// <returns>A dictionary of all localization keys and their values</returns>
     Task<Dictionary<string, string>> GetAllMessagesAsync(SupportedLanguage language);
 }
 
+/// <summary>
+/// Static class containing all localization keys used throughout the application.
+/// These keys correspond to entries in the localization resource files.
+/// </summary>
+/// <remarks>
+/// Keys are organized by functional area: registration, validation, language switching,
+/// help messages, error messages, extraction patterns, and context templates.
+/// </remarks>
 public static class LocalizationKeys
 {
     // Registration messages

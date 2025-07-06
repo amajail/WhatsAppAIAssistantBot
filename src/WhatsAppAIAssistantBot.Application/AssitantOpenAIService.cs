@@ -7,13 +7,50 @@ using WhatsAppAIAssistantBot.Domain.Entities;
 
 namespace WhatsAppAIAssistantBot.Application;
 
+/// <summary>
+/// Service contract for AI assistant interactions using OpenAI's Assistant API.
+/// Manages conversation threads and generates AI responses for user messages.
+/// </summary>
 public interface IAssistantService
 {
+    /// <summary>
+    /// Creates a new conversation thread for a user or retrieves an existing one.
+    /// Each user maintains a persistent thread to preserve conversation context.
+    /// </summary>
+    /// <param name="userId">The user's unique identifier (phone number)</param>
+    /// <returns>The OpenAI thread ID for the user's conversation</returns>
+    /// <exception cref="InvalidOperationException">Thrown when thread creation fails</exception>
     Task<string> CreateOrGetThreadAsync(string userId);
+
+    /// <summary>
+    /// Generates an AI response to a user message within their conversation thread.
+    /// </summary>
+    /// <param name="threadId">The OpenAI thread ID for conversation context</param>
+    /// <param name="userMessage">The user's message content</param>
+    /// <returns>The AI assistant's response</returns>
+    /// <exception cref="InvalidOperationException">Thrown when AI interaction fails</exception>
     Task<string> GetAssistantReplyAsync(string threadId, string userMessage);
+
+    /// <summary>
+    /// Generates an AI response using a contextual message that includes user information.
+    /// This method is used when the conversation requires user context for better responses.
+    /// </summary>
+    /// <param name="threadId">The OpenAI thread ID for conversation context</param>
+    /// <param name="contextualMessage">The message with embedded user context</param>
+    /// <returns>The AI assistant's context-aware response</returns>
+    /// <exception cref="InvalidOperationException">Thrown when AI interaction fails</exception>
     Task<string> GetAssistantReplyWithContextAsync(string threadId, string contextualMessage);
 }
 
+/// <summary>
+/// OpenAI-based implementation of the AI assistant service.
+/// Manages conversation threads and generates responses using OpenAI's Assistant API.
+/// </summary>
+/// <remarks>
+/// This service maintains persistent conversation threads for each user, allowing for
+/// context-aware conversations. It handles thread creation, message posting, and response retrieval
+/// with proper error handling and logging throughout the interaction process.
+/// </remarks>
 public class AssistantOpenAIService : IAssistantService
 {
     private readonly IConfiguration configuration;

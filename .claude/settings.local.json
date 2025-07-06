@@ -6,7 +6,9 @@
       "Bash(dotnet test:*)",
       "Bash(dotnet build:*)",
       "Bash(find:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
