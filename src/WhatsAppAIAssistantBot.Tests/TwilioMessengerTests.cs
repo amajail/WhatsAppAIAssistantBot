@@ -187,21 +187,12 @@ public class TwilioMessengerTests
             fromNumber: "whatsapp:+1234567890"
         );
 
-        TwilioMessenger messenger;
-        try
+        // The constructor should throw, so we expect an exception
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
-            messenger = new TwilioMessenger(mockConfiguration.Object, _mockLogger.Object);
-        }
-        catch
-        {
-            // Constructor will throw, but we need to test the uninitialized state
-            // For this test, we'll use a different approach - mock the initialization failure
-            Assert.True(true, "Constructor correctly threw exception for invalid configuration");
-            return;
-        }
-
-        // If we reach here, initialization unexpectedly succeeded
-        Assert.True(false, "Expected constructor to fail with invalid configuration");
+            var messenger = new TwilioMessenger(mockConfiguration.Object, _mockLogger.Object);
+            await messenger.SendMessageAsync("to", "message");
+        });
     }
 
     [Fact]

@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.Logging;
 using WhatsAppAIAssistantBot.Api.Controllers;
 using WhatsAppAIAssistantBot.Application;
 using WhatsAppAIAssistantBot.Models;
+using WhatsAppAIAssistantBot.Domain.Services;
 using Moq;
 using Xunit;
 
@@ -13,15 +15,20 @@ public class WhatsAppControllerTests
 {
     private readonly Mock<IOrchestrationService> _mockOrchestrationService;
     private readonly Mock<ILogger<WhatsAppController>> _mockLogger;
-    private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly Mock<IWebhookSecurityService> _mockSecurityService;
     private readonly WhatsAppController _controller;
 
     public WhatsAppControllerTests()
     {
         _mockOrchestrationService = new Mock<IOrchestrationService>();
         _mockLogger = new Mock<ILogger<WhatsAppController>>();
-        _mockConfiguration = new Mock<IConfiguration>();
-        _controller = new WhatsAppController(_mockOrchestrationService.Object, _mockLogger.Object, _mockConfiguration.Object);
+        _mockSecurityService = new Mock<IWebhookSecurityService>();
+        
+        // Setup security service to skip signature validation in tests
+        _mockSecurityService.Setup(x => x.ShouldValidateSignature()).Returns(false);
+        _mockSecurityService.Setup(x => x.SanitizeMessage(It.IsAny<string>())).Returns<string>(x => x);
+        
+        _controller = new WhatsAppController(_mockOrchestrationService.Object, _mockLogger.Object, _mockSecurityService.Object);
     }
 
     [Fact]
@@ -274,5 +281,87 @@ public class WhatsAppControllerTests
         // Verify it's a proper JSON object (not just a string)
         Assert.StartsWith("{", responseJson.Trim());
         Assert.EndsWith("}", responseJson.Trim());
+    }
+
+    [Fact]
+    public async Task Receive_WithSignatureValidationEnabled_AndInvalidSignature_ShouldReturnUnauthorized()
+    {
+        // Arrange
+        var mockOrchestrationService = new Mock<IOrchestrationService>();
+        var mockLogger = new Mock<ILogger<WhatsAppController>>();
+        var mockSecurityService = new Mock<IWebhookSecurityService>();
+        
+        // Setup security service to enable validation and return false (invalid signature)
+        mockSecurityService.Setup(x => x.ShouldValidateSignature()).Returns(true);
+        mockSecurityService.Setup(x => x.ValidateSignature(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<KeyValuePair<string, string>>>()))
+            .Returns(false);
+        mockSecurityService.Setup(x => x.SanitizeMessage(It.IsAny<string>())).Returns<string>(x => x);
+        
+        var controller = new WhatsAppController(mockOrchestrationService.Object, mockLogger.Object, mockSecurityService.Object);
+        
+        // Setup ControllerContext and HttpContext with required headers and form
+        var input = new TwilioWebhookModel { From = "whatsapp:+1234567890", Body = "Test message" };
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["X-Twilio-Signature"] = "dummy";
+        httpContext.Request.Scheme = "https";
+        httpContext.Request.Host = new HostString("localhost");
+        httpContext.Request.Path = "/api/whatsapp";
+        httpContext.Request.QueryString = QueryString.Empty;
+        httpContext.Request.Form = new FormCollection(new Dictionary<string, StringValues>
+        {
+            { "From", input.From },
+            { "Body", input.Body }
+        });
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        // Act
+        var result = await controller.Receive(input);
+
+        // Assert
+        var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
+        var response = unauthorizedResult.Value;
+        Assert.NotNull(response);
+        
+        // Verify orchestrator was never called due to security validation failure
+        mockOrchestrationService.Verify(x => x.HandleMessageAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        
+        // Verify security service was called
+        mockSecurityService.Verify(x => x.ShouldValidateSignature(), Times.Once);
+        mockSecurityService.Verify(x => x.ValidateSignature(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<KeyValuePair<string, string>>>()), Times.Once);
+    }
+
+    [Fact] 
+    public async Task Receive_WithValidSignature_ShouldSanitizeMessageAndProcess()
+    {
+        // Arrange
+        var mockOrchestrationService = new Mock<IOrchestrationService>();
+        var mockLogger = new Mock<ILogger<WhatsAppController>>();
+        var mockSecurityService = new Mock<IWebhookSecurityService>();
+        mockSecurityService.Setup(x => x.ShouldValidateSignature()).Returns(true);
+        mockSecurityService.Setup(x => x.ValidateSignature(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<KeyValuePair<string, string>>>())).Returns(true);
+        mockSecurityService.Setup(x => x.SanitizeMessage("  Test message  ")).Returns("Test message");
+        var controller = new WhatsAppController(mockOrchestrationService.Object, mockLogger.Object, mockSecurityService.Object);
+        var input = new TwilioWebhookModel { From = "whatsapp:+1234567890", Body = "  Test message  " };
+        // Setup ControllerContext and HttpContext with required headers and form
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["X-Twilio-Signature"] = "dummy";
+        httpContext.Request.Scheme = "https";
+        httpContext.Request.Host = new HostString("localhost");
+        httpContext.Request.Path = "/api/whatsapp";
+        httpContext.Request.QueryString = QueryString.Empty;
+        httpContext.Request.Form = new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+        {
+            { "From", input.From },
+            { "Body", input.Body }
+        });
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        // Act
+        var result = await controller.Receive(input);
+        // Assert
+        var okResult = Assert.IsType<OkResult>(result);
+        mockSecurityService.Verify(x => x.ShouldValidateSignature(), Times.Once);
+        mockSecurityService.Verify(x => x.ValidateSignature(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<KeyValuePair<string, string>>>()), Times.Once);
+        mockSecurityService.Verify(x => x.SanitizeMessage("  Test message  "), Times.Once);
+        mockOrchestrationService.Verify(x => x.HandleMessageAsync("whatsapp:+1234567890", "Test message"), Times.Once);
     }
 }

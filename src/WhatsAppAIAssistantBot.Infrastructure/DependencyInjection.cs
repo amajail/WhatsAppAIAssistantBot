@@ -46,6 +46,7 @@ public static class DependencyInjection
         
         services.AddScoped<IUserStorageService, UserStorageService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
+        services.AddSingleton<IWebhookSecurityService, WebhookSecurityService>();
 
         return services;
     }
