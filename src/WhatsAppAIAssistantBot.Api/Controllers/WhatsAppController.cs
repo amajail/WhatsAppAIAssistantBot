@@ -2,9 +2,8 @@ namespace WhatsAppAIAssistantBot.Api.Controllers
 {
     using Microsoft.AspNetCore.Mvc;
     using WhatsAppAIAssistantBot.Models;
-    using WhatsAppAIAssistantBot.Application;
     using WhatsAppAIAssistantBot.Domain.Services;
-    using System.ComponentModel.DataAnnotations;
+    using WhatsAppAIAssistantBot.Application;
 
     /// <summary>
     /// WhatsApp webhook controller that receives and processes incoming messages from Twilio.
@@ -62,7 +61,7 @@ namespace WhatsAppAIAssistantBot.Api.Controllers
             {
                 var signature = Request.Headers["X-Twilio-Signature"].FirstOrDefault();
                 var url = $"{Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}";
-                var formData = Request.Form.Select(kvp => new KeyValuePair<string, string>(kvp.Key, kvp.Value));
+                var formData = Request.Form.Select(kvp => new KeyValuePair<string, string>(kvp.Key, kvp.Value.ToString()));
                 
                 if (!_securityService.ValidateSignature(signature!, url, formData))
                 {
