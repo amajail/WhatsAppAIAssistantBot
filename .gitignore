@@ -54,3 +54,10 @@ TestResults/
 
 # Local
 src/WhatsAppAIAssistantBot.Api/appsettings.Development.json
+
+# Google Cloud Service Account Credentials
+*.json
+!appsettings*.json
+!package*.json
+!tsconfig*.json
+!**/Resources/*.json

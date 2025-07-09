@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using WhatsAppAIAssistantBot.Domain.Entities;
 using WhatsAppAIAssistantBot.Domain.Models;
 using WhatsAppAIAssistantBot.Domain.Services;
+using WhatsAppAIAssistantBot.Domain.Services.Calendar;
 using WhatsAppAIAssistantBot.Infrastructure;
 
 namespace WhatsAppAIAssistantBot.Application.Services;
@@ -37,11 +38,13 @@ public class CommandHandlerService(
     ILocalizationService localizationService,
     IUserStorageService userStorageService,
     ITwilioMessenger twilioMessenger,
+    IGoogleCalendarService googleCalendarService,
     ILogger<CommandHandlerService> logger) : ICommandHandlerService
 {
     private readonly ILocalizationService _localizationService = localizationService;
     private readonly IUserStorageService _userStorageService = userStorageService;
     private readonly ITwilioMessenger _twilioMessenger = twilioMessenger;
+    private readonly IGoogleCalendarService _googleCalendarService = googleCalendarService;
     private readonly ILogger<CommandHandlerService> _logger = logger;
 
     /// <summary>
@@ -71,6 +74,13 @@ public class CommandHandlerService(
         if (await HandleHelpCommandAsync(user, message))
         {
             _logger.LogInformation("Processed help command for user {UserId}", user.PhoneNumber);
+            return true;
+        }
+
+        // Handle calendar commands
+        if (await HandleCalendarCommandAsync(user, message))
+        {
+            _logger.LogInformation("Processed calendar command for user {UserId}", user.PhoneNumber);
             return true;
         }
 
@@ -134,6 +144,81 @@ public class CommandHandlerService(
         {
             var helpMessage = await _localizationService.GetLocalizedMessageAsync(
                 LocalizationKeys.HelpMessage, user.LanguageCode);
+            await _twilioMessenger.SendMessageAsync(user.PhoneNumber, helpMessage);
+            return true;
+        }
+        
+        return false;
+    }
+
+    /// <summary>
+    /// Handles calendar-related commands for booking appointments
+    /// </summary>
+    /// <param name="user">The user making the request</param>
+    /// <param name="message">The command message</param>
+    /// <returns>True if a calendar command was processed, false otherwise</returns>
+    private async Task<bool> HandleCalendarCommandAsync(User user, string message)
+    {
+        var lowerMessage = message.ToLowerInvariant().Trim();
+        
+        // Check for availability commands
+        if (lowerMessage.StartsWith("/slots") || lowerMessage.StartsWith("/disponibilidad"))
+        {
+            try
+            {
+                var tomorrow = DateTime.Now.AddDays(1);
+                var nextWeek = tomorrow.AddDays(7);
+                
+                var availableSlots = await _googleCalendarService.GetAvailableTimeSlotsAsync(tomorrow, nextWeek);
+                
+                if (availableSlots.Any())
+                {
+                    var response = user.Language == SupportedLanguage.Spanish
+                        ? "📅 *Horarios disponibles:*\n\n"
+                        : "📅 *Available time slots:*\n\n";
+                    
+                    foreach (var slot in availableSlots.Take(5))
+                    {
+                        response += $"• {slot.DisplayText}\n";
+                    }
+                    
+                    response += user.Language == SupportedLanguage.Spanish
+                        ? "\n💬 Responde con el número de horario que prefieres para reservar."
+                        : "\n💬 Reply with the slot number you prefer to book.";
+                    
+                    await _twilioMessenger.SendMessageAsync(user.PhoneNumber, response);
+                }
+                else
+                {
+                    var noSlotsMessage = user.Language == SupportedLanguage.Spanish
+                        ? "😔 No hay horarios disponibles en los próximos 7 días."
+                        : "😔 No available time slots in the next 7 days.";
+                    
+                    await _twilioMessenger.SendMessageAsync(user.PhoneNumber, noSlotsMessage);
+                }
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available slots for user {UserId}", user.PhoneNumber);
+                
+                var errorMessage = user.Language == SupportedLanguage.Spanish
+                    ? "❌ Error al obtener horarios disponibles. Intenta más tarde."
+                    : "❌ Error getting available slots. Please try again later.";
+                
+                await _twilioMessenger.SendMessageAsync(user.PhoneNumber, errorMessage);
+                return true;
+            }
+        }
+        
+        // Check for booking commands
+        if (lowerMessage.StartsWith("/book") || lowerMessage.StartsWith("/reservar"))
+        {
+            var helpMessage = user.Language == SupportedLanguage.Spanish
+                ? "📝 *Para reservar una cita:*\n\n1. Primero usa `/slots` para ver horarios disponibles\n2. Luego responde con el número del horario que prefieres\n\n*Ejemplo:* `/slots`"
+                : "📝 *To book an appointment:*\n\n1. First use `/slots` to see available times\n2. Then reply with the slot number you prefer\n\n*Example:* `/slots`";
+            
             await _twilioMessenger.SendMessageAsync(user.PhoneNumber, helpMessage);
             return true;
         }

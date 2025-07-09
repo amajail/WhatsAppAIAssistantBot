@@ -3,6 +3,7 @@ using WhatsAppAIAssistantBot.Application.Services;
 using WhatsAppAIAssistantBot.Domain.Entities;
 using WhatsAppAIAssistantBot.Domain.Models;
 using WhatsAppAIAssistantBot.Domain.Services;
+using WhatsAppAIAssistantBot.Domain.Services.Calendar;
 using WhatsAppAIAssistantBot.Infrastructure;
 using Moq;
 using Xunit;
@@ -14,6 +15,7 @@ public class CommandHandlerServiceTests
     private readonly Mock<ILocalizationService> _mockLocalizationService;
     private readonly Mock<IUserStorageService> _mockUserStorageService;
     private readonly Mock<ITwilioMessenger> _mockTwilioMessenger;
+    private readonly Mock<IGoogleCalendarService> _mockGoogleCalendarService;
     private readonly Mock<ILogger<CommandHandlerService>> _mockLogger;
     private readonly CommandHandlerService _commandHandlerService;
     private readonly User _testUser;
@@ -23,12 +25,14 @@ public class CommandHandlerServiceTests
         _mockLocalizationService = new Mock<ILocalizationService>();
         _mockUserStorageService = new Mock<IUserStorageService>();
         _mockTwilioMessenger = new Mock<ITwilioMessenger>();
+        _mockGoogleCalendarService = new Mock<IGoogleCalendarService>();
         _mockLogger = new Mock<ILogger<CommandHandlerService>>();
         
         _commandHandlerService = new CommandHandlerService(
             _mockLocalizationService.Object,
             _mockUserStorageService.Object,
             _mockTwilioMessenger.Object,
+            _mockGoogleCalendarService.Object,
             _mockLogger.Object
         );
 
