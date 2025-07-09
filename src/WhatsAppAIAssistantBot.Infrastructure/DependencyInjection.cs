@@ -2,10 +2,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using WhatsAppAIAssistantBot.Domain.Services;
+using WhatsAppAIAssistantBot.Domain.Services.Calendar;
 using WhatsAppAIAssistantBot.Domain.Repositories;
+using WhatsAppAIAssistantBot.Domain.Models.Calendar;
 using WhatsAppAIAssistantBot.Infrastructure.Data;
 using WhatsAppAIAssistantBot.Infrastructure.Services;
+using WhatsAppAIAssistantBot.Infrastructure.Services.Calendar;
 using WhatsAppAIAssistantBot.Infrastructure.Repositories;
 using WhatsAppAIAssistantBot.Infrastructure.Mock;
 
@@ -47,6 +51,11 @@ public static class DependencyInjection
         services.AddScoped<IUserStorageService, UserStorageService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IWebhookSecurityService, WebhookSecurityService>();
+        
+        // Configure Google Calendar
+        var googleCalendarSection = configuration.GetSection(GoogleCalendarConfiguration.SectionName);
+        services.Configure<GoogleCalendarConfiguration>(googleCalendarSection);
+        services.AddScoped<IGoogleCalendarService, GoogleCalendarService>();
 
         return services;
     }

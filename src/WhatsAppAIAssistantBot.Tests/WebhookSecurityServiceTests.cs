@@ -1,10 +1,7 @@
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using WhatsAppAIAssistantBot.Infrastructure.Services;
 using Moq;
-using Xunit;
 
 namespace WhatsAppAIAssistantBot.Tests;
 
