@@ -41,6 +41,7 @@ public static class DependencyInjection
         // Register services
         if (environment.IsDevelopment())
         {
+            services.AddHttpClient<MockTwilioMessenger>();
             services.AddScoped<ITwilioMessenger, MockTwilioMessenger>();
         }
         else
