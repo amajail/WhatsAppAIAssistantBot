@@ -338,6 +338,7 @@ public class GoogleCalendarServiceTests
         int year, int month, int day, int hour, int minute, int second)
     {
         // Arrange
+        var testTime = new DateTime(year, month, day, hour, minute, second);
         var startDate = new DateTime(year, month, day, 0, 0, 0);
         var endDate = new DateTime(year, month, day, 23, 59, 59);
 

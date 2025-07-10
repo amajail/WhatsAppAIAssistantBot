@@ -111,12 +111,12 @@ public class GoogleCalendarService : IGoogleCalendarService
                 Description = $"{bookingRequest.Description}\n\nBooked via WhatsApp by: {bookingRequest.AttendeeName} ({bookingRequest.PhoneNumber})",
                 Start = new EventDateTime
                 {
-                    DateTime = bookingRequest.StartTime,
+                    DateTimeDateTimeOffset = bookingRequest.StartTime,
                     TimeZone = _configuration.TimeZone
                 },
                 End = new EventDateTime
                 {
-                    DateTime = bookingRequest.EndTime,
+                    DateTimeDateTimeOffset = bookingRequest.EndTime,
                     TimeZone = _configuration.TimeZone
                 },
                 Attendees = new List<EventAttendee>
@@ -169,8 +169,8 @@ public class GoogleCalendarService : IGoogleCalendarService
         try
         {
             var request = _calendarService.Events.List(_configuration.CalendarId);
-            request.TimeMin = startTime.AddMinutes(-1);
-            request.TimeMax = endTime.AddMinutes(1);
+            request.TimeMinDateTimeOffset = startTime.AddMinutes(-1);
+            request.TimeMaxDateTimeOffset = endTime.AddMinutes(1);
             request.SingleEvents = true;
             request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
 
@@ -179,10 +179,10 @@ public class GoogleCalendarService : IGoogleCalendarService
             // Check if any existing event overlaps with the requested time slot
             foreach (var existingEvent in events.Items)
             {
-                if (existingEvent.Start?.DateTime != null && existingEvent.End?.DateTime != null)
+                if (existingEvent.Start?.DateTimeDateTimeOffset != null && existingEvent.End?.DateTimeDateTimeOffset != null)
                 {
-                    var existingStart = existingEvent.Start.DateTime.Value;
-                    var existingEnd = existingEvent.End.DateTime.Value;
+                    var existingStart = existingEvent.Start.DateTimeDateTimeOffset.Value.DateTime;
+                    var existingEnd = existingEvent.End.DateTimeDateTimeOffset.Value.DateTime;
                     
                     // Check for overlap
                     if (startTime < existingEnd && endTime > existingStart)
@@ -256,8 +256,8 @@ public class GoogleCalendarService : IGoogleCalendarService
         CancellationToken cancellationToken)
     {
         var request = _calendarService.Events.List(_configuration.CalendarId);
-        request.TimeMin = startDate;
-        request.TimeMax = endDate.AddDays(1);
+        request.TimeMinDateTimeOffset = startDate;
+        request.TimeMaxDateTimeOffset = endDate.AddDays(1);
         request.SingleEvents = true;
         request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
 
@@ -301,8 +301,8 @@ public class GoogleCalendarService : IGoogleCalendarService
             
             // Check if this slot conflicts with any existing event
             var hasConflict = existingEvents.Any(e => 
-                e.Start?.DateTime != null && e.End?.DateTime != null &&
-                slotStart < e.End.DateTime && slotEnd > e.Start.DateTime);
+                e.Start?.DateTimeDateTimeOffset != null && e.End?.DateTimeDateTimeOffset != null &&
+                slotStart < e.End.DateTimeDateTimeOffset.Value.DateTime && slotEnd > e.Start.DateTimeDateTimeOffset.Value.DateTime);
 
             if (!hasConflict)
             {

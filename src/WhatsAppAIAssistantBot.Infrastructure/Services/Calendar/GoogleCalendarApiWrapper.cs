@@ -39,8 +39,8 @@ public class GoogleCalendarApiWrapper : IGoogleCalendarApiWrapper
         CancellationToken cancellationToken = default)
     {
         var request = _calendarService.Events.List(calendarId);
-        request.TimeMin = timeMin;
-        request.TimeMax = timeMax;
+        request.TimeMinDateTimeOffset = timeMin;
+        request.TimeMaxDateTimeOffset = timeMax;
         request.SingleEvents = true;
         request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
 
@@ -49,8 +49,8 @@ public class GoogleCalendarApiWrapper : IGoogleCalendarApiWrapper
         return events.Items.Select(e => new CalendarEvent
         {
             Id = e.Id,
-            StartTime = e.Start?.DateTime ?? DateTime.MinValue,
-            EndTime = e.End?.DateTime ?? DateTime.MinValue,
+            StartTime = e.Start?.DateTimeDateTimeOffset?.DateTime ?? DateTime.MinValue,
+            EndTime = e.End?.DateTimeDateTimeOffset?.DateTime ?? DateTime.MinValue,
             Summary = e.Summary ?? string.Empty,
             Description = e.Description ?? string.Empty,
             HtmlLink = e.HtmlLink ?? string.Empty
@@ -75,12 +75,12 @@ public class GoogleCalendarApiWrapper : IGoogleCalendarApiWrapper
             Description = $"{bookingRequest.Description}\n\nBooked via WhatsApp by: {bookingRequest.AttendeeName} ({bookingRequest.PhoneNumber})",
             Start = new EventDateTime
             {
-                DateTime = bookingRequest.StartTime,
+                DateTimeDateTimeOffset = bookingRequest.StartTime,
                 TimeZone = _configuration.TimeZone
             },
             End = new EventDateTime
             {
-                DateTime = bookingRequest.EndTime,
+                DateTimeDateTimeOffset = bookingRequest.EndTime,
                 TimeZone = _configuration.TimeZone
             },
             Attendees = new List<EventAttendee>
@@ -99,8 +99,8 @@ public class GoogleCalendarApiWrapper : IGoogleCalendarApiWrapper
         return new CalendarEvent
         {
             Id = createdEvent.Id,
-            StartTime = createdEvent.Start?.DateTime ?? DateTime.MinValue,
-            EndTime = createdEvent.End?.DateTime ?? DateTime.MinValue,
+            StartTime = createdEvent.Start?.DateTimeDateTimeOffset?.DateTime ?? DateTime.MinValue,
+            EndTime = createdEvent.End?.DateTimeDateTimeOffset?.DateTime ?? DateTime.MinValue,
             Summary = createdEvent.Summary ?? string.Empty,
             Description = createdEvent.Description ?? string.Empty,
             HtmlLink = createdEvent.HtmlLink ?? string.Empty

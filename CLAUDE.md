@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a .NET 8 WhatsApp AI Assistant Bot built with ASP.NET Core Web API, Microsoft Semantic Kernel, and Twilio integration. The bot receives WhatsApp messages via Twilio webhooks and responds using OpenAI's Assistant API.
 
+The project includes a **BotTester** console application for development and testing purposes, providing an interactive command-line interface to test bot functionality without needing real WhatsApp integration.
+
 ## Architecture
 
 The solution follows Clean Architecture principles with these layers:
@@ -15,6 +17,7 @@ The solution follows Clean Architecture principles with these layers:
 - **WhatsAppAIAssistantBot.Domain**: Domain entities and business rules
 - **WhatsAppAIAssistantBot.Infrastructure**: External integrations (Twilio messaging)
 - **WhatsAppAIAssistantBot.Models**: Shared data models (Twilio webhook models)
+- **BotTester**: Console application for interactive bot testing during development
 
 ### Key Components
 
@@ -29,6 +32,7 @@ The solution follows Clean Architecture principles with these layers:
 - **TwilioMessenger** (`src/WhatsAppAIAssistantBot.Infrastructure/TwilioMessenger.cs:18`): Handles outbound WhatsApp message sending via Twilio
 - **LocalizationService** (`src/WhatsAppAIAssistantBot.Infrastructure/Services/LocalizationService.cs`): Provides multi-language support (English/Spanish)
 - **SemanticKernelService**: Provides local AI skills (currently has TimeSkill)
+- **BotApiClient** (`BotTester/Services/BotApiClient.cs`): HTTP client for sending test messages to the bot API
 
 ### Enhanced Message Flow
 
@@ -59,6 +63,9 @@ dotnet build
 
 # Run the API project
 dotnet run --project src/WhatsAppAIAssistantBot.Api/WhatsAppAIAssistantBot.Api.csproj
+
+# Run the BotTester console app (for development testing)
+dotnet run --project BotTester/BotTester.csproj
 
 # Build and run with Docker
 docker build -t whatsapp-bot .
@@ -234,3 +241,32 @@ The API includes health check endpoints for monitoring:
 - **`/api/health`**: Basic health check returning status, timestamp, and version
 - **`/api/health/ready`**: Readiness probe for deployment verification
 - **Automated testing**: GitHub Actions pipeline includes health checks after deployment
+
+## Bot Testing
+
+The **BotTester** console application provides an interactive development environment:
+
+### Features
+- **Interactive Testing**: Send messages to the bot via command line
+- **Webhook Receiver**: Receives bot responses via HTTP webhook at `/mock-twilio`
+- **Real-time Responses**: See bot responses immediately in the console
+- **Command Support**: Test all bot commands (/slots, /book, /lang, /help)
+- **Easy Setup**: Pre-configured for local development
+
+### Usage
+1. Start the Bot API: `dotnet run --project src/WhatsAppAIAssistantBot.Api/WhatsAppAIAssistantBot.Api.csproj`
+2. Start the BotTester: `dotnet run --project BotTester/BotTester.csproj`
+3. Type messages in the console to test bot functionality
+
+### Configuration
+- **Bot API URL**: `http://localhost:5000/api/whatsapp`
+- **Webhook Port**: `5001`
+- **Test Phone**: `whatsapp:+1234567890`
+- **Bot Phone**: `whatsapp:+15551234567`
+
+### Architecture
+The BotTester creates a feedback loop:
+1. Console App sends HTTP POST to bot API (`/api/whatsapp`)
+2. Bot API processes message and generates response
+3. MockTwilioMessenger sends response to console app webhook (`/mock-twilio`)
+4. Console App displays bot response in real-time
